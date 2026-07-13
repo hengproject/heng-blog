@@ -1,216 +1,25 @@
 ---
-import type { GetStaticPaths, Page } from 'astro'
-import type { CollectionEntry } from 'astro:content'
-import { getBlogCategories } from '@/config/blog-categories'
-import { getTranslations } from '@/i18n'
-import {
-  getBlogCollection,
-  getCollectionsByCategory,
-  getSidebarCollections,
-  getUniqueCategories,
-  getUniqueTags,
-  sortMDByDate,
-  type SidebarCollection
-} from '@/server'
+import type { GetStaticPaths } from 'astro'
 
-import PageLayout from '@/layouts/BaseLayout.astro'
-import { Paginator, PostPreview } from '@/components/pages'
-import { Button, Icon } from '@/components/user'
+import { getCategoryPageData } from '@/utils/category-pages'
+import { getBlogCollection } from '@/server'
+
+import CategoryPage from '@/components/blog/CategoryPage.astro'
 import config from '@/site-config'
 
 export const prerender = true
 
 export const getStaticPaths = (async ({ paginate }) => {
-  const allCollections = await getBlogCollection()
-  const allUniqueCategories = getUniqueCategories(allCollections)
-  const categories = getBlogCategories('zh', allUniqueCategories)
-  const categoryMap = Object.fromEntries(categories.map(({ slug, name }) => [slug, name]))
+  const categoryPages = getCategoryPageData(await getBlogCollection(), 'zh')
 
-  return categories.flatMap(({ slug: category }, index) => {
-    const collections = sortMDByDate(getCollectionsByCategory(allCollections, category))
-    const uniqueTags = getUniqueTags(collections)
-    const allSidebarCollections = getSidebarCollections(allCollections, 'zh', {
-      preferCategory: category
-    })
-    const sidebarCollections = getSidebarCollections(allCollections, 'zh', {
-      preferCategory: category,
-      limit: 4
-    })
-    const hasMoreCollections = allSidebarCollections.length > sidebarCollections.length
-    const collectionsCount = collections.length
-
-    // Get previous and next categories (circular navigation)
-    const prevIndex = index === 0 ? categories.length - 1 : index - 1
-    const nextIndex = index === categories.length - 1 ? 0 : index + 1
-    const prevCategory = categories[prevIndex].slug
-    const nextCategory = categories[nextIndex].slug
-
-    return paginate(collections, {
-      params: { category },
+  return categoryPages.flatMap(({ posts, props }) =>
+    paginate(posts, {
+      params: { category: props.category },
       pageSize: config.content?.blogPageSize || 8,
-      props: {
-        uniqueTags,
-        sidebarCollections,
-        hasMoreCollections,
-        collectionsCount,
-        category,
-        prevCategory,
-        nextCategory,
-        categoryMap
-      }
+      props
     })
-  })
+  )
 }) satisfies GetStaticPaths
-
-interface Props {
-  page: Page<CollectionEntry<'blog'>>
-  uniqueTags: string[]
-  sidebarCollections: SidebarCollection[]
-  hasMoreCollections: boolean
-  collectionsCount: number
-  category: string
-  prevCategory: string
-  nextCategory: string
-  categoryMap: Record<string, string>
-}
-
-const {
-  page,
-  uniqueTags,
-  sidebarCollections,
-  hasMoreCollections,
-  collectionsCount,
-  category,
-  prevCategory,
-  nextCategory,
-  categoryMap: categoryMapProp
-} = Astro.props
-
-const categoryDisplayName = categoryMapProp[category] || category
-const text = getTranslations('zh')
-
-const meta = {
-  description: `${text.blog.categoryDescription}${categoryDisplayName}`,
-  title: `${categoryDisplayName} - ${text.blog.title}`
-}
 ---
 
-<PageLayout {meta}>
-  <main class='mt-6 lg:mt-10'>
-    <div id='content-header' class='animate'>
-      <div class='category-nav-wrapper mb-6 mt-6 sm:mt-10'>
-        <h1 class='inline-block text-3xl font-medium'>{categoryDisplayName}</h1>
-        <div class='category-nav-arrows ml-3 inline-flex gap-1 align-middle'>
-          <a
-            href={`/blog/${prevCategory}`}
-            class='flex h-8 w-8 items-center justify-center transition-colors hover:text-primary'
-            title={`${text.blog.previous}: ${categoryMapProp[prevCategory]}`}
-            aria-label={`${text.blog.goTo} ${categoryMapProp[prevCategory]}`}
-          >
-            <Icon name='up' class='size-5' />
-          </a>
-          <a
-            href={`/blog/${nextCategory}`}
-            class='flex h-8 w-8 items-center justify-center transition-colors hover:text-primary'
-            title={`${text.blog.next}: ${categoryMapProp[nextCategory]}`}
-            aria-label={`${text.blog.goTo} ${categoryMapProp[nextCategory]}`}
-          >
-            <Icon name='chevron-down' class='size-5' />
-          </a>
-        </div>
-      </div>
-    </div>
-    {
-      page.data.length === 0 ? (
-        <p>{text.blog.empty}</p>
-      ) : (
-        <div class='grid gap-y-16 sm:grid-cols-[3fr_1fr] sm:gap-x-8'>
-          <section aria-label={text.blog.postList} class='animate' id='content'>
-            {/* header */}
-            <div class='mb-3 flex flex-col justify-between text-sm sm:mb-5 sm:flex-row'>
-              <span class='text-muted-foreground'>
-                {text.blog.page} {page.currentPage} {text.blog.showing} {page.data.length}{' '}
-                {text.blog.of} {collectionsCount} {text.blog.posts}
-              </span>
-              <a aria-label={text.blog.viewByYear} href='/archives' data-astro-prefetch>
-                {text.blog.viewByYear} →
-              </a>
-            </div>
-            {/* posts */}
-            <ul class='flex flex-col gap-y-4 text-start'>
-              {page.data.map((post) => (
-                <PostPreview {post} detailed />
-              ))}
-            </ul>
-            <Paginator currentPage={page.currentPage} lastPage={page.lastPage} url={page.url} />
-          </section>
-
-          {/* sidebar */}
-          {(!!uniqueTags.length || !!sidebarCollections.length) && (
-            <aside class='animate' id='sidebar'>
-              {!!sidebarCollections.length && (
-                <div class='mb-8'>
-                  <h2 class='mb-4 flex items-center text-lg font-semibold'>
-                    <Icon name='package' class='me-2' />
-                    {text.blog.collections}
-                  </h2>
-                  <ul class='flex flex-col gap-3'>
-                    {sidebarCollections.map((collection) => (
-                      <li>
-                        <a
-                          href={collection.href}
-                          class='group block rounded-xl border border-border bg-muted/40 p-3 transition-colors hover:border-foreground/20 hover:bg-muted'
-                          data-astro-prefetch
-                        >
-                          <p class='flex items-center justify-between text-sm font-medium text-foreground'>
-                            <span>{collection.title}</span>
-                            <span class='rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground'>
-                              {collection.count}
-                            </span>
-                          </p>
-                          <p class='mt-1 text-xs text-muted-foreground'>{collection.description}</p>
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                  {hasMoreCollections && (
-                    <span class='mt-4 block text-end text-sm'>
-                      <a
-                        aria-label={text.blog.viewAllCollections}
-                        href='/collection'
-                        data-astro-prefetch
-                      >
-                        {text.blog.viewAllCollections} →
-                      </a>
-                    </span>
-                  )}
-                </div>
-              )}
-
-              {!!uniqueTags.length && (
-                <>
-                  <h2 class='mb-4 flex items-center text-lg font-semibold'>
-                    <Icon name='tag-2' class='me-2' />
-                    {text.blog.tags}
-                  </h2>
-                  <ul class='text-bgColor flex flex-wrap gap-2'>
-                    {uniqueTags.map((tag) => (
-                      <li>
-                        <Button title={tag} href={`/tags/${tag}`} style='pill' />
-                      </li>
-                    ))}
-                  </ul>
-                  <span class='mt-4 block sm:text-end'>
-                    <a aria-label={text.blog.viewAll} href='/tags' data-astro-prefetch>
-                      {text.blog.viewAll} →
-                    </a>
-                  </span>
-                </>
-              )}
-            </aside>
-          )}
-        </div>
-      )
-    }
-  </main>
-</PageLayout>
+<CategoryPage locale='zh' {...Astro.props} />

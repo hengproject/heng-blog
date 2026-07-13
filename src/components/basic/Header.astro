@@ -2,16 +2,16 @@
 import { getRelativeLocaleUrl } from 'astro:i18n'
 import { getBlogCategories } from '@/config/blog-categories'
 import { getLocale, getTranslations } from '@/i18n'
-import { getBlogCollection, getUniqueCategories } from '@/server'
+import { getBlogCollection, getBlogCollectionEn, getUniqueCategories } from '@/server'
 
 import { Icon } from '@/components/user'
 import LanguageSwitch from '@/components/user/LanguageSwitch.astro'
 import config from '@/site-config'
 
 // Get all categories for the dropdown menu
-const allCollections = await getBlogCollection()
-const allCategories = getUniqueCategories(allCollections)
 const locale = getLocale(Astro.currentLocale)
+const allCollections = locale === 'en' ? await getBlogCollectionEn() : await getBlogCollection()
+const allCategories = getUniqueCategories(allCollections)
 const text = getTranslations(locale)
 const categories = getBlogCategories(locale, allCategories)
 const navLabels: Record<string, string> = {
