@@ -75,11 +75,10 @@ export default defineConfig({
     //   Exclude: ['index.*.js']
     // }),
 
-    // Temporary fix vercel adapter
-    // static build method is not needed
-    outputCopier({
-      integ: ['sitemap', 'pagefind']
-    })
+    // Temporary fix for the Vercel adapter; static targets do not need copied output.
+    ...(!isCloudflare && !isGithubPages
+      ? [outputCopier({ integ: ['sitemap', 'pagefind'] })]
+      : [])
   ],
   // root: './my-project-directory',
 
