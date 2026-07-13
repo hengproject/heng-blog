@@ -1,7 +1,6 @@
 ---
-import { getRelativeLocaleUrl } from 'astro:i18n'
 import { getBlogCategories } from '@/config/blog-categories'
-import { getLocale, getTranslations } from '@/i18n'
+import { getLocale, getLocalizedUrl, getTranslations } from '@/i18n'
 import { getBlogCollection, getBlogCollectionEn, getUniqueCategories } from '@/server'
 
 import { Icon } from '@/components/user'
@@ -19,15 +18,6 @@ const navLabels: Record<string, string> = {
   '/blog/research': text.nav.blog
 }
 
-// 处理 trailingSlash: 'never' 配置的辅助函数
-function getLocalizedUrl(locale: string | undefined, path: string) {
-  let url = getRelativeLocaleUrl(locale || 'zh', path)
-  // 移除尾部斜杠（除了根路径 /）
-  if (url !== '/' && url.endsWith('/')) {
-    url = url.slice(0, -1)
-  }
-  return url
-}
 ---
 
 <header-component

@@ -1,6 +1,5 @@
 ---
-import { getRelativeLocaleUrl } from 'astro:i18n'
-
+import { getLocalizedUrl } from '@/i18n'
 import clsx from '@/utils/clsx'
 
 interface TOCItem {
@@ -24,14 +23,6 @@ interface Props {
 }
 
 const { title = 'DOCS', categories, class: className, ...props } = Astro.props
-function getLocalizedUrl(locale: string | undefined, path: string) {
-  let url = getRelativeLocaleUrl(locale || 'zh', path)
-  // 移除尾部斜杠（除了根路径 /）
-  if (url !== '/' && url.endsWith('/')) {
-    url = url.slice(0, -1)
-  }
-  return url
-}
 ---
 
 <docs-toc class={clsx('not-prose', className)} {...props}>

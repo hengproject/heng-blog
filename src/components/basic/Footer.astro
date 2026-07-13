@@ -1,13 +1,14 @@
 ---
 import { Icon } from '@/components/user'
-import { getLocale, getTranslations } from '@/i18n'
+import { getLocale, getLocalizedUrl, getTranslations } from '@/i18n'
 import config from '@/site-config'
 
 const year = new Date().getFullYear()
 const footerConf = config.footer || {}
 const locale = getLocale(Astro.currentLocale)
 const text = getTranslations(locale)
-const policyUrl = locale === 'en' ? '/en/terms/list' : '/terms/list'
+const policyUrl = getLocalizedUrl(locale, '/terms/list')
+const copyrightName = config.author_en ?? config.author
 
 // Create social links with RSS
 const socialLinks = {
@@ -35,7 +36,7 @@ const socialLinks = {
           )
         }
         <span>
-          © {year} Suheng ·
+          © {year} {copyrightName} ·
           <a href={policyUrl}>{text.policy.title}</a>
         </span>
         {

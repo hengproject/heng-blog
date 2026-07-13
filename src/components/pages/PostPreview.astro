@@ -2,8 +2,8 @@
 import { Image } from 'astro:assets'
 import { render, type CollectionEntry, type CollectionKey } from 'astro:content'
 import type { HTMLTag, Polymorphic } from 'astro/types'
-import { getRelativeLocaleUrl } from 'astro:i18n'
 
+import { getLocalizedUrl } from '@/i18n'
 import { cn } from '@/utils'
 import { Button, FormattedDate, Icon } from '@/components/user'
 
@@ -34,14 +34,6 @@ const heroImageProps = data.heroImage ? {
   height: data.heroImage.height || 630
 } : undefined
 
-function getLocalizedUrl(locale: string | undefined, path: string) {
-  let url = getRelativeLocaleUrl(locale || 'zh', path)
-  // 移除尾部斜杠（除了根路径 /）
-  if (url !== '/' && url.endsWith('/')) {
-    url = url.slice(0, -1)
-  }
-  return url
-}
 ---
 
 <li

@@ -1,6 +1,5 @@
 ---
-import { getRelativeLocaleUrl } from 'astro:i18n'
-import { getLocale, getTranslations } from '@/i18n'
+import { getLocale, getLocalizedUrl, getTranslations } from '@/i18n'
 import { getBlogCollection, getBlogCollectionEn, getPostSlug } from '@/server'
 
 import Icon from './Icon.astro'
@@ -15,10 +14,7 @@ if (locale === 'en') {
   pagePath = currentPath === '/en' ? '/' : currentPath.replace(/^\/en(?=\/)/u, '')
 }
 
-let targetUrl = getRelativeLocaleUrl(targetLocale, pagePath)
-if (targetUrl !== '/' && targetUrl.endsWith('/')) {
-  targetUrl = targetUrl.slice(0, -1)
-}
+const targetUrl = getLocalizedUrl(targetLocale, pagePath)
 
 let translationAvailable = true
 const articleMatch = pagePath.match(/^\/blog\/(.+)$/u)

@@ -1,11 +1,10 @@
 ---
 import { Image } from 'astro:assets'
-import { getTranslations, type Locale } from '@/i18n'
+import { getSiteIdentity, getTranslations, type Locale } from '@/i18n'
 
 import CommonPage from '@/layouts/CommonPage.astro'
 import { Card, Icon, Label } from '@/components/user'
 import avatar from '@/assets/avatar.png'
-import config from '@/site-config'
 
 interface Props {
   locale: Locale
@@ -13,9 +12,7 @@ interface Props {
 
 const { locale } = Astro.props
 const text = getTranslations(locale)
-const author = locale === 'en' ? (config.author_en ?? config.author) : config.author
-const description =
-  locale === 'en' ? (config.description_en ?? config.description) : config.description
+const { author, description } = getSiteIdentity(locale)
 ---
 
 <CommonPage title={text.about.title}>

@@ -1,6 +1,6 @@
 ---
 import { Image } from 'astro:assets'
-import { getTranslations, type Locale } from '@/i18n'
+import { getSiteIdentity, getTranslations, type Locale } from '@/i18n'
 
 import PageLayout from '@/layouts/BaseLayout.astro'
 import BlogStats from '@/components/home/BlogStats.astro'
@@ -15,9 +15,7 @@ interface Props {
 
 const { locale } = Astro.props
 const text = getTranslations(locale)
-const author = locale === 'en' ? (config.author_en ?? config.author) : config.author
-const description =
-  locale === 'en' ? (config.description_en ?? config.description) : config.description
+const { author, description } = getSiteIdentity(locale)
 const localePrefix = locale === 'en' ? '/en' : ''
 ---
 
