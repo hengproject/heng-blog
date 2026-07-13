@@ -1,0 +1,49 @@
+---
+import { Card, Icon, Label } from '@/components/user'
+import CommonPage from '@/layouts/CommonPage.astro'
+import config from '@/site-config'
+
+interface Props {
+  locale?: 'en' | 'zh'
+}
+
+const { locale = 'en' } = Astro.props
+const isZh = locale === 'zh'
+const author = locale === 'en' ? (config.author_en ?? config.author) : config.author
+const description = locale === 'en' ? (config.description_en ?? config.description) : config.description
+---
+
+<CommonPage title={isZh ? '关于' : 'About'}>
+  <div class='not-prose flex flex-col gap-10'>
+    <section class='flex flex-col gap-5 sm:flex-row sm:items-center'>
+      <div class='grid size-24 shrink-0 place-items-center rounded-lg border bg-muted text-3xl font-bold'>
+        {author.slice(0, 1)}
+      </div>
+      <div class='flex flex-col gap-3'>
+        <div>
+          <h2 class='text-2xl font-semibold'>{author}</h2>
+          <p class='mt-1 text-muted-foreground'>{description}</p>
+        </div>
+        <div class='flex flex-wrap gap-2'>
+          <Label title={isZh ? '你的位置' : 'Your location'}>
+            <Icon name='location' class='size-4' slot='icon' />
+          </Label>
+          <Label title='GitHub' as='a' href='https://github.com' target='_blank'>
+            <Icon name='github' class='size-4' slot='icon' />
+          </Label>
+        </div>
+      </div>
+    </section>
+
+    <section class='grid gap-4 md:grid-cols-2'>
+      <Card
+        heading={isZh ? '个人简介' : 'Profile'}
+        subheading={isZh ? '在这里介绍你的背景、兴趣和当前方向。' : 'Introduce your background, interests, and current direction here.'}
+      />
+      <Card
+        heading={isZh ? '当前关注' : 'Current focus'}
+        subheading={isZh ? '列出正在研究、学习或构建的内容。' : 'List what you are researching, learning, or building.'}
+      />
+    </section>
+  </div>
+</CommonPage>

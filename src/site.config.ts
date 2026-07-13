@@ -28,12 +28,8 @@ export const theme: ThemeUserConfig = {
   customCss: [],
   header: {
     menu: [
-      { title: 'Home', link: '/' },
       { title: 'Blog', link: '/blog/research' },
-      { title: 'Archives', link: '/archives' },
-      { title: 'Tags', link: '/tags' },
-      { title: 'Links', link: '/links' },
-      { title: 'Components', link: '/components' }
+      { title: 'About', link: '/about' }
     ]
   },
   footer: {
