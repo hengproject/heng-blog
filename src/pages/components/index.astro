@@ -1,0 +1,70 @@
+---
+import CommonPage from '@/layouts/CommonPage.astro'
+import { Aside, Button, Card, Collapse, Icon, Label, Spoiler, TabItem, Tabs, Timeline } from '@/components/user'
+
+const timelineEvents = [
+  { date: 'Now', content: '<strong>Starter created</strong><p>Theme and component foundation.</p>' },
+  { date: 'Next', content: '<strong>Add content</strong><p>Replace these examples with your own work.</p>' }
+]
+---
+
+<CommonPage title='Component reference'>
+  <div class='not-prose flex flex-col gap-12'>
+    <section class='flex flex-col gap-4'>
+      <h2 class='text-xl font-semibold'>Buttons and labels</h2>
+      <div class='flex flex-wrap gap-3'>
+        <Button title='Default button' href='#cards' />
+        <Button title='Forward action' href='#cards' style='ahead' />
+        <Button title='Pill button' href='#cards' style='pill' />
+        <Label title='Location'>
+          <Icon name='location' class='size-4' slot='icon' />
+        </Label>
+        <Label title='GitHub' as='a' href='https://github.com' target='_blank'>
+          <Icon name='github' class='size-4' slot='icon' />
+        </Label>
+      </div>
+    </section>
+
+    <section class='flex flex-col gap-4' id='cards'>
+      <h2 class='text-xl font-semibold'>Cards</h2>
+      <div class='grid gap-4 md:grid-cols-2'>
+        <Card heading='Writing project' subheading='A flexible card for projects or links' date='2026'>
+          <p class='mt-2 text-sm text-muted-foreground'>Add any Astro content through the default slot.</p>
+        </Card>
+        <Card as='a' href='/blog/all' heading='Blog archive' subheading='Cards can also be links'>
+          <p class='mt-2 text-sm text-muted-foreground'>Hover to see the interactive state.</p>
+        </Card>
+      </div>
+    </section>
+
+    <section class='flex flex-col gap-4'>
+      <h2 class='text-xl font-semibold'>Callouts</h2>
+      <Aside type='note' title='Reference note'>
+        <p>This is the neutral note treatment.</p>
+      </Aside>
+      <Aside type='tip' title='Placeholder tip'>
+        <p>Inline details can include a <Spoiler>hover reveal</Spoiler>.</p>
+      </Aside>
+    </section>
+
+    <section class='flex flex-col gap-4'>
+      <h2 class='text-xl font-semibold'>Interactive content</h2>
+      <Collapse title='Expandable section'>
+        <p class='text-sm text-muted-foreground'>Collapsed content can hold text, links, or richer components.</p>
+      </Collapse>
+      <Tabs>
+        <TabItem label='Writing'>
+          <p class='text-sm text-muted-foreground'>Use tabs to organize related content.</p>
+        </TabItem>
+        <TabItem label='Projects'>
+          <p class='text-sm text-muted-foreground'>The second panel demonstrates the selected state.</p>
+        </TabItem>
+      </Tabs>
+    </section>
+
+    <section class='flex flex-col gap-4'>
+      <h2 class='text-xl font-semibold'>Timeline</h2>
+      <Timeline events={timelineEvents} />
+    </section>
+  </div>
+</CommonPage>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">My Blog</title>
+  <desc id="desc">Default social card for the blog starter.</desc>
+  <rect width="1200" height="630" fill="#fafafa"/>
+  <rect x="96" y="96" width="1008" height="438" rx="24" fill="#fff" stroke="#d4d4d8" stroke-width="4"/>
+  <text x="150" y="300" fill="#18181b" font-family="system-ui, sans-serif" font-size="88" font-weight="700">My Blog</text>
+  <text x="150" y="380" fill="#52525b" font-family="system-ui, sans-serif" font-size="36">Notes, ideas, and projects.</text>
+</svg>
