@@ -59,5 +59,11 @@ export default {
     tags: '标签',
     viewAll: '查看全部',
     back: '返回'
+  },
+  policy: {
+    title: '站点政策',
+    description: '本站的隐私、版权与免责声明',
+    document: '查看完整站点政策',
+    documentDescription: '隐私、版权、外部链接与内容声明'
   }
 } as const

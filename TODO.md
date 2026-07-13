@@ -51,10 +51,10 @@ revisited before the site is considered production-ready.
   - Later: set it to the final Cloudflare Pages or custom-domain URL.
 
 - [ ] **Site policy contact details**
-  - Planned locations: `src/pages/terms/` and `src/pages/en/terms/`
-  - Current state: no policy pages or public contact address are defined.
-  - Planned fix: initially publish concise policies that do not claim unavailable services or
-    tracking. Add a contact method only after one is selected.
+  - Locations: `src/pages/terms/` and `src/pages/en/terms/`
+  - Current state: concise bilingual policies are published without claiming unavailable services
+    or tracking; no public contact address is defined.
+  - Later: add a contact method after one is selected.
 
 - [ ] **Footer social links**
   - Location: `src/site.config.ts`, under `theme.footer.social`

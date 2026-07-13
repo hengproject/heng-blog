@@ -61,5 +61,11 @@ export default {
     tags: 'Tags',
     viewAll: 'View all',
     back: 'Back'
+  },
+  policy: {
+    title: 'Site Policy',
+    description: 'Privacy, copyright, and disclaimer information for this site',
+    document: 'View the complete site policy',
+    documentDescription: 'Privacy, copyright, external links, and content disclaimer'
   }
 } satisfies TranslationDictionary

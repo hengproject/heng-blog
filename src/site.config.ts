@@ -1,4 +1,4 @@
-import type { CardListData, Config, IntegrationUserConfig, ThemeUserConfig } from './types'
+import type { Config, IntegrationUserConfig, ThemeUserConfig } from './types'
 
 export const theme: ThemeUserConfig = {
   title: "Heng's Blog",
@@ -74,11 +74,6 @@ export const integ: IntegrationUserConfig = {
     emoji: [],
     additionalConfigs: {}
   }
-}
-
-export const terms: CardListData = {
-  title: 'Terms',
-  list: []
 }
 
 const config = { ...theme, integ } as Config
