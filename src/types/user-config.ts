@@ -13,6 +13,7 @@ export const UserConfigSchema = z.object({
   author_en: z.string().optional(),
   description: z.string().optional(),
   description_en: z.string().optional(),
+  blogStartDate: z.string().optional(),
   favicon: z.string().optional(),
   titleDelimiter: z.string().default('•'),
   prerender: z.boolean().default(true),

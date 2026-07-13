@@ -39,9 +39,9 @@ revisited before the site is considered production-ready.
   - Later: update both languages together so the two versions remain aligned.
 
 - [ ] **Blog start date**
-  - Current location: `src/components/home/BlogStats.astro`
-  - Current state: hardcoded to `2024-06-15`.
-  - Planned fix: move it to `src/site.config.ts`; replace it with the actual launch date.
+  - Location: `src/site.config.ts`, under `theme.blogStartDate`
+  - Temporary value: `2026-07-13`, the date this starter reached its first release.
+  - Later: replace it with the actual public launch date if the two dates differ.
 
 ## Configuration to complete
 

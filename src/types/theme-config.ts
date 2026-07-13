@@ -30,6 +30,9 @@ export const ThemeConfigSchema = () =>
     /** English version of description */
     description_en: z.string().optional().describe('English version of description'),
 
+    /** Date from which the homepage counts days online, formatted as YYYY-MM-DD. */
+    blogStartDate: z.string().optional().describe('Blog launch date in YYYY-MM-DD format'),
+
     /** The default favicon for your site which should be a path to an image in the `public/` directory. */
     favicon: FaviconSchema(),
 

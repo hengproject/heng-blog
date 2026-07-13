@@ -118,6 +118,24 @@ locale or create routes; file names and route prefixes remain the source of trut
 English listings only contain real `index-en.md(x)` files. Chinese posts are not silently rendered
 under English URLs. On an article without a target translation, the language switch is disabled.
 
+## Personal customization boundaries
+
+Keep personal content and presentation changes in these dedicated locations:
+
+```text
+src/content/blog/             Articles and their local images
+src/components/custom/        New personal Astro components
+src/assets/styles/custom.css  Personal CSS overrides and additions
+public/images/                Shared static images referenced by URL
+```
+
+`src/layouts/BaseLayout.astro` already imports `custom.css`; do not add another stylesheet import
+for each customization. Components can be imported with the `@/components/custom/...` alias.
+
+These boundaries reduce conflicts when merging upstream theme changes. They cannot eliminate a
+conflict when both branches edit the same route, configuration key, or shared layout, so keep route
+wrappers small and make personal UI changes inside custom components where possible.
+
 ### Adding another locale
 
 Adding a third language requires coordinated changes to the Astro locale list, a new dictionary,

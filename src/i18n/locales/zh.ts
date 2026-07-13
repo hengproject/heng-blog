@@ -16,7 +16,14 @@ export default {
     starterDescription:
       '内容目录已经准备完成，可以在 src/content/blog 中添加 Markdown 或 MDX 文章。',
     browsePosts: '浏览文章',
-    statistics: '统计'
+    statistics: '统计',
+    stats: {
+      daysOnline: '运行天数',
+      lastUpdated: '最后更新',
+      noPosts: '暂无文章',
+      totalWords: '总字数',
+      totalPosts: '文章总数'
+    }
   },
   about: {
     title: '关于',

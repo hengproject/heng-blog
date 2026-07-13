@@ -18,7 +18,14 @@ export default {
     starterDescription:
       'The content directory is ready for Markdown or MDX posts under src/content/blog.',
     browsePosts: 'Browse posts',
-    statistics: 'Statistics'
+    statistics: 'Statistics',
+    stats: {
+      daysOnline: 'Days online',
+      lastUpdated: 'Last updated',
+      noPosts: 'No posts yet',
+      totalWords: 'Total words',
+      totalPosts: 'Total posts'
+    }
   },
   about: {
     title: 'About',

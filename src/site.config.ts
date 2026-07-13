@@ -6,6 +6,7 @@ export const theme: ThemeUserConfig = {
   author_en: 'Suheng',
   description: 'Notes, ideas, and projects.',
   description_en: 'Notes, ideas, and projects.',
+  blogStartDate: '2026-07-13',
   favicon: '/favicon.svg',
   locale: {
     lang: 'en-US',
