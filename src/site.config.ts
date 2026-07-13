@@ -2,8 +2,8 @@ import type { CardListData, Config, IntegrationUserConfig, ThemeUserConfig } fro
 
 export const theme: ThemeUserConfig = {
   title: "Heng's Blog",
-  author: 'Your Name',
-  author_en: 'Your Name',
+  author: '杨苏恒',
+  author_en: 'Suheng',
   description: 'Notes, ideas, and projects.',
   description_en: 'Notes, ideas, and projects.',
   favicon: '/favicon.svg',
