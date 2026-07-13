@@ -1,7 +1,7 @@
 import type { CardListData, Config, IntegrationUserConfig, ThemeUserConfig } from './types'
 
 export const theme: ThemeUserConfig = {
-  title: 'My Blog',
+  title: "Heng's Blog",
   author: 'Your Name',
   author_en: 'Your Name',
   description: 'Notes, ideas, and projects.',
@@ -49,7 +49,7 @@ export const integ: IntegrationUserConfig = {
   links: {
     logbook: [],
     applyTip: [
-      { name: 'Name', val: 'My Blog' },
+      { name: 'Name', val: "Heng's Blog" },
       { name: 'Description', val: 'Notes, ideas, and projects.' },
       { name: 'URL', val: 'https://example.com' },
       { name: 'Avatar', val: 'https://example.com/favicon.svg' }
