@@ -1,79 +1,67 @@
 ---
 import { getRelativeLocaleUrl } from 'astro:i18n'
+import { getLocale, getTranslations } from '@/i18n'
+import { getBlogCollection, getBlogCollectionEn, getPostSlug } from '@/server'
+
 import Icon from './Icon.astro'
 
-// 获取当前语言
-const currentLocale = Astro.currentLocale || 'zh'
-
-// 定义语言映射
-const languages = {
-  zh: '中文',
-  en: 'English'
-} as const
-
-// 类型安全的当前语言
-const safeCurrentLocale = (currentLocale === 'zh' || currentLocale === 'en') ? currentLocale : 'zh'
-
-// 计算目标语言
-const targetLocale = safeCurrentLocale === 'zh' ? 'en' : 'zh'
-
-// 获取当前页面路径（不包含语言前缀）
+const locale = getLocale(Astro.currentLocale)
+const targetLocale = locale === 'zh' ? 'en' : 'zh'
+const text = getTranslations(locale)
 const currentPath = Astro.url.pathname
-let pagePath = ''
 
-if (safeCurrentLocale === 'en') {
-  if (currentPath === '/en') {
-    // 英文首页
-    pagePath = '/'
-  } else if (currentPath.startsWith('/en/')) {
-    // 英文其他页面，移除 /en/ 前缀
-    pagePath = currentPath.slice(3) || '/'
-  } else {
-    // 默认情况
-    pagePath = currentPath
-  }
-} else if (safeCurrentLocale === 'zh') {
-  // 如果是中文页面，直接使用路径
-  pagePath = currentPath
-} else {
-  // 默认情况
-  pagePath = currentPath
+let pagePath = currentPath
+if (locale === 'en') {
+  pagePath = currentPath === '/en' ? '/' : currentPath.replace(/^\/en(?=\/)/u, '')
 }
 
-// 生成目标语言的 URL
 let targetUrl = getRelativeLocaleUrl(targetLocale, pagePath)
-
-// 处理 trailingSlash: 'never' 配置
-// 移除尾部斜杠（除了根路径 /）
 if (targetUrl !== '/' && targetUrl.endsWith('/')) {
   targetUrl = targetUrl.slice(0, -1)
 }
+
+let translationAvailable = true
+const articleMatch = pagePath.match(/^\/blog\/(.+)$/u)
+
+if (articleMatch) {
+  const articleSlug = articleMatch[1]
+  const [zhPosts, enPosts] = await Promise.all([getBlogCollection(), getBlogCollectionEn()])
+  const zhSlugs = new Set(zhPosts.map(({ id }) => getPostSlug(id)))
+  const enSlugs = new Set(enPosts.map(({ id }) => getPostSlug(id)))
+  const isArticle = zhSlugs.has(articleSlug) || enSlugs.has(articleSlug)
+
+  if (isArticle) {
+    translationAvailable =
+      targetLocale === 'en' ? enSlugs.has(articleSlug) : zhSlugs.has(articleSlug)
+  }
+}
+
+const label = translationAvailable ? text.language.switchTo : text.language.unavailable
 ---
 
-<button 
-  id="language-switch-btn"
-  class="box-content rounded-md border p-1.5 transition-colors hover:bg-border md:group-[.not-top]:rounded-xl"
-  title={`切换到${languages[targetLocale]}`}
-  data-target-url={targetUrl}
+<button
+  id='language-switch-btn'
+  class:list={[
+    'box-content rounded-md border p-1.5 transition-colors md:group-[.not-top]:rounded-xl',
+    translationAvailable ? 'hover:bg-border' : 'cursor-not-allowed opacity-45'
+  ]}
+  title={label}
+  aria-label={label}
+  data-target-url={translationAvailable ? targetUrl : undefined}
+  disabled={!translationAvailable}
 >
-  <span class="sr-only">{`切换到${languages[targetLocale]}`}</span>
-  <div class="flex items-center gap-1">
-    <Icon name="earth" class="size-4" />
-    <span class="text-xs font-medium">{languages[safeCurrentLocale]}</span>
+  <div class='flex items-center gap-1'>
+    <Icon name='earth' class='size-4' />
+    <span class='text-xs font-medium'>{text.language.current}</span>
   </div>
 </button>
 
 <script>
   document.addEventListener('DOMContentLoaded', () => {
-    const switchBtn = document.getElementById('language-switch-btn') as HTMLButtonElement
-    
-    if (switchBtn) {
-      switchBtn.addEventListener('click', () => {
-        const targetUrl = switchBtn.dataset.targetUrl
-        if (targetUrl) {
-          window.location.href = targetUrl
-        }
-      })
-    }
+    const switchBtn = document.getElementById('language-switch-btn') as HTMLButtonElement | null
+    switchBtn?.addEventListener('click', () => {
+      const targetUrl = switchBtn.dataset.targetUrl
+      if (targetUrl) window.location.href = targetUrl
+    })
   })
-</script> 
+</script>

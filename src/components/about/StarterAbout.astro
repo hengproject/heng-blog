@@ -1,26 +1,29 @@
 ---
 import { Image } from 'astro:assets'
-import { Card, Icon, Label } from '@/components/user'
+import { getTranslations, type Locale } from '@/i18n'
+
 import CommonPage from '@/layouts/CommonPage.astro'
+import { Card, Icon, Label } from '@/components/user'
 import avatar from '@/assets/avatar.png'
 import config from '@/site-config'
 
 interface Props {
-  locale?: 'en' | 'zh'
+  locale: Locale
 }
 
-const { locale = 'en' } = Astro.props
-const isZh = locale === 'zh'
+const { locale } = Astro.props
+const text = getTranslations(locale)
 const author = locale === 'en' ? (config.author_en ?? config.author) : config.author
-const description = locale === 'en' ? (config.description_en ?? config.description) : config.description
+const description =
+  locale === 'en' ? (config.description_en ?? config.description) : config.description
 ---
 
-<CommonPage title={isZh ? '关于' : 'About'}>
+<CommonPage title={text.about.title}>
   <div class='not-prose flex flex-col gap-10'>
     <section class='flex flex-col gap-5 sm:flex-row sm:items-center'>
       <Image
         src={avatar}
-        alt={`${author} profile image`}
+        alt={`${author}: ${text.about.avatarAlt}`}
         class='size-24 shrink-0 rounded-lg border object-cover p-1'
         loading='eager'
       />
@@ -30,7 +33,7 @@ const description = locale === 'en' ? (config.description_en ?? config.descripti
           <p class='mt-1 text-muted-foreground'>{description}</p>
         </div>
         <div class='flex flex-wrap gap-2'>
-          <Label title={isZh ? '你的位置' : 'Your location'}>
+          <Label title={text.about.location}>
             <Icon name='location' class='size-4' slot='icon' />
           </Label>
           <Label title='GitHub' as='a' href='https://github.com' target='_blank'>
@@ -41,14 +44,8 @@ const description = locale === 'en' ? (config.description_en ?? config.descripti
     </section>
 
     <section class='grid gap-4 md:grid-cols-2'>
-      <Card
-        heading={isZh ? '个人简介' : 'Profile'}
-        subheading={isZh ? '在这里介绍你的背景、兴趣和当前方向。' : 'Introduce your background, interests, and current direction here.'}
-      />
-      <Card
-        heading={isZh ? '当前关注' : 'Current focus'}
-        subheading={isZh ? '列出正在研究、学习或构建的内容。' : 'List what you are researching, learning, or building.'}
-      />
+      <Card heading={text.about.profile} subheading={text.about.profileDescription} />
+      <Card heading={text.about.focus} subheading={text.about.focusDescription} />
     </section>
   </div>
 </CommonPage>

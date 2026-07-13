@@ -17,6 +17,8 @@
       "@/components/*": ["src/components/*"],
       "@/config/*": ["src/config/*"],
       "@/layouts/*": ["src/layouts/*"],
+      "@/i18n": ["src/i18n/index.ts"],
+      "@/i18n/*": ["src/i18n/*"],
       "@/utils": ["src/utils/index.ts"],
       "@/utils/*": ["src/utils/*"],
       "@/plugins/*": ["src/plugins/*"],

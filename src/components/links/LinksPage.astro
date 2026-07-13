@@ -1,45 +1,20 @@
 ---
-import { Icon } from '@/components/user'
-import FriendList from '@/components/links/FriendList.astro'
-import CommonPage from '@/layouts/CommonPage.astro'
+import { getTranslations, type Locale } from '@/i18n'
 import friendsData from '@/public/links.json'
+
+import CommonPage from '@/layouts/CommonPage.astro'
+import FriendList from '@/components/links/FriendList.astro'
+import { Icon } from '@/components/user'
 import config from '@/site-config'
 
 interface Props {
-  locale?: 'en' | 'zh'
+  locale: Locale
 }
 
-const { locale = 'en' } = Astro.props
+const { locale } = Astro.props
 const copyValues = config.integ.links?.applyTip ?? []
 const friendList = friendsData.friends[0]
-
-const text = locale === 'zh'
-  ? {
-      title: '友链',
-      directory: '博客友链',
-      directoryDescription: '一些值得拜访的站点',
-      apply: '交换友链',
-      applyDescription: '本站信息与申请参考',
-      copyHint: '点击任意一项复制',
-      feed: '朋友圈',
-      feedDescription: '来自友链 RSS 的文章可以展示在这里',
-      sample: '示例文章',
-      source: '示例博客',
-      date: '刚刚更新'
-    }
-  : {
-      title: 'Links',
-      directory: 'Blogroll',
-      directoryDescription: 'A small directory of sites worth visiting',
-      apply: 'Exchange links',
-      applyDescription: 'Reference details for blogroll requests',
-      copyHint: 'Select any value to copy it',
-      feed: 'Friend circle',
-      feedDescription: 'Recent posts from linked RSS feeds can appear here',
-      sample: 'A sample post from the blogroll',
-      source: 'Example Blog',
-      date: 'Updated recently'
-    }
+const text = getTranslations(locale).links
 
 const headings = [
   { depth: 2, slug: 'blogroll', text: text.directory },
@@ -82,9 +57,12 @@ const headings = [
                 type='button'
                 class='copy-value flex min-w-0 items-center justify-between gap-3 rounded-lg border border-border bg-background px-4 py-3 text-left transition-colors hover:bg-muted'
                 data-copy={val}
+                data-copied-message={text.copied}
               >
                 <span class='min-w-0'>
-                  <span class='block text-xs font-medium uppercase text-muted-foreground'>{name}</span>
+                  <span class='block text-xs font-medium uppercase text-muted-foreground'>
+                    {name}
+                  </span>
                   <span class='block truncate text-sm'>{val}</span>
                 </span>
                 <Icon name='document' class='size-4 shrink-0 text-muted-foreground' />
@@ -123,7 +101,8 @@ const headings = [
         const value = button.dataset.copy
         if (!value) return
         await navigator.clipboard.writeText(value)
-        document.dispatchEvent(new CustomEvent('toast', { detail: { message: 'Copied' } }))
+        const message = button.dataset.copiedMessage || 'Copied'
+        document.dispatchEvent(new CustomEvent('toast', { detail: { message } }))
       })
     })
   </script>

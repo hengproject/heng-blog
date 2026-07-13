@@ -1,0 +1,57 @@
+---
+import { Image } from 'astro:assets'
+import { getTranslations, type Locale } from '@/i18n'
+
+import PageLayout from '@/layouts/BaseLayout.astro'
+import BlogStats from '@/components/home/BlogStats.astro'
+import Section from '@/components/home/Section.astro'
+import { Button } from '@/components/user'
+import avatar from '@/assets/avatar.png'
+import config from '@/site-config'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const text = getTranslations(locale)
+const author = locale === 'en' ? (config.author_en ?? config.author) : config.author
+const description =
+  locale === 'en' ? (config.description_en ?? config.description) : config.description
+const localePrefix = locale === 'en' ? '/en' : ''
+---
+
+<PageLayout meta={{ title: text.home.metaTitle }} highlightColor='#659EB966'>
+  <main class='flex w-full flex-col items-center'>
+    <section
+      class='animate mb-10 flex flex-col items-center gap-y-4 text-center'
+      id='content-header'
+    >
+      <Image
+        src={avatar}
+        alt={`${author}: ${text.home.avatarAlt}`}
+        class='size-24 rounded-lg border object-cover p-1'
+        loading='eager'
+      />
+      <div>
+        <h1 class='text-3xl font-bold'>{config.title}</h1>
+        <p class='mt-2 text-muted-foreground'>{description}</p>
+      </div>
+    </section>
+
+    <div id='content' class='animate flex flex-col gap-y-10 md:w-4/5 lg:w-5/6'>
+      <Section title={text.home.startWriting}>
+        <p class='text-muted-foreground'>{text.home.starterDescription}</p>
+        <Button
+          title={text.home.browsePosts}
+          class='w-fit self-end'
+          href={`${localePrefix}/blog/research`}
+          style='ahead'
+        />
+      </Section>
+      <Section title={text.home.statistics}>
+        <BlogStats />
+      </Section>
+    </div>
+  </main>
+</PageLayout>

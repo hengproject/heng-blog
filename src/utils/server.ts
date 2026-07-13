@@ -21,11 +21,9 @@ export async function getBlogCollection(contentType: CollectionKey = 'blog') {
 }
 
 /**
- * Get English blog collection with fallback to Chinese version
- * If an English version (index-en.md) doesn't exist, use the Chinese version (index.md)
+ * Get posts with an explicit English source file.
  */
 export async function getBlogCollectionEn(contentType: CollectionKey = 'blogEn') {
-  // Get all English versions
   const englishPosts = await getCollection(
     contentType,
     ({ data }: CollectionEntry<typeof contentType>) => {
@@ -33,36 +31,16 @@ export async function getBlogCollectionEn(contentType: CollectionKey = 'blogEn')
     }
   )
 
-  // Transform English post IDs from "anygrasp/index-en" to "anygrasp"
   const transformedEnglishPosts = englishPosts.map((post) => ({
     ...post,
-    id: post.id.replace(/\/index-en$/, '')
+    id: getPostSlug(post.id)
   }))
 
-  // Get all Chinese versions
-  const chinesePosts = await getBlogCollection('blog')
+  return transformedEnglishPosts
+}
 
-  // Create a map of English posts by their slug (folder name)
-  const englishPostSlugs = new Set(
-    transformedEnglishPosts.map((post) => {
-      // Extract folder name from id: "anygrasp/index.md" -> "anygrasp"
-      const match = post.id.match(/^(.+?)\/index\.(md|mdx)$/)
-      return match ? match[1] : post.id
-    })
-  )
-
-  // Add Chinese posts that don't have English versions
-  const fallbackPosts = chinesePosts
-    .filter((post) => {
-      // Extract folder name from id: "anygrasp/index.md" -> "anygrasp"
-      const match = post.id.match(/^(.+?)\/index\.(md|mdx)$/)
-      const slug = match ? match[1] : post.id
-      return !englishPostSlugs.has(slug)
-    })
-    .map((post) => post as CollectionEntry<'blogEn'>)
-
-  // Combine English posts and fallback Chinese posts
-  return [...transformedEnglishPosts, ...fallbackPosts]
+export function getPostSlug(id: string) {
+  return id.replace(/\/index(?:-en)?(?:\.(?:md|mdx))?$/u, '')
 }
 
 function getYearFromCollection<T extends CollectionKey>(
@@ -181,10 +159,6 @@ const sidebarCollectionRules = [
 
 type SidebarRule = (typeof sidebarCollectionRules)[number]
 
-function normalizePostId(id: string) {
-  return id.replace(/\/index(?:-en)?\.(md|mdx)$/u, '')
-}
-
 export function getSidebarCollections(
   collections: Collections,
   locale: 'zh' | 'en' = 'zh',
@@ -199,7 +173,7 @@ export function getSidebarCollections(
   const items = sidebarCollectionRules
     .map((rule, index) => {
       const matchedPosts = collections.filter((collection) =>
-        normalizePostId(collection.id).startsWith(rule.slugPrefix)
+        getPostSlug(collection.id).startsWith(rule.slugPrefix)
       )
       const count = matchedPosts.length
       const categoryMatched =
@@ -247,7 +221,5 @@ export function getCollectionPostsByKey<T extends CollectionKey>(
   const rule = getSidebarCollectionRule(key)
   if (!rule) return []
 
-  return collections.filter((collection) =>
-    normalizePostId(collection.id).startsWith(rule.slugPrefix)
-  )
+  return collections.filter((collection) => getPostSlug(collection.id).startsWith(rule.slugPrefix))
 }
