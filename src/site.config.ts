@@ -29,9 +29,10 @@ export const theme: ThemeUserConfig = {
   header: {
     menu: [
       { title: 'Home', link: '/' },
-      { title: 'Blog', link: '/blog/all' },
+      { title: 'Blog', link: '/blog/research' },
       { title: 'Archives', link: '/archives' },
       { title: 'Tags', link: '/tags' },
+      { title: 'Links', link: '/links' },
       { title: 'Components', link: '/components' }
     ]
   },
@@ -51,7 +52,12 @@ export const theme: ThemeUserConfig = {
 export const integ: IntegrationUserConfig = {
   links: {
     logbook: [],
-    applyTip: []
+    applyTip: [
+      { name: 'Name', val: 'My Blog' },
+      { name: 'Description', val: 'Notes, ideas, and projects.' },
+      { name: 'URL', val: 'https://example.com' },
+      { name: 'Avatar', val: 'https://example.com/favicon.svg' }
+    ]
   },
   pagefind: true,
   quote: {

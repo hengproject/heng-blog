@@ -24,6 +24,7 @@ Create a post at `src/content/blog/<slug>/index.md`:
 title: My first post
 description: A short summary of the post.
 publishDate: 2026-01-01
+category: research
 tags: []
 draft: false
 ---
@@ -33,6 +34,20 @@ Write the post here.
 
 Use `index-en.md` in the same directory for an optional English version. Site identity,
 navigation, integrations, and comments are configured in `src/site.config.ts`.
+
+## Categories
+
+The starter registers `research` and `technical` in `src/config/blog-categories.ts`. Assign a
+post by setting its frontmatter:
+
+```yaml
+category: technical
+```
+
+Categories are not restricted to those two values. A new value such as `category: notes`
+automatically creates `/blog/notes` after the first matching post is added. Add it to
+`BLOG_CATEGORIES` only when the category should exist while empty or needs a custom display name
+and menu position.
 
 ## Commands
 

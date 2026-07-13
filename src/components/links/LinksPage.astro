@@ -1,0 +1,130 @@
+---
+import { Icon } from '@/components/user'
+import FriendList from '@/components/links/FriendList.astro'
+import CommonPage from '@/layouts/CommonPage.astro'
+import friendsData from '@/public/links.json'
+import config from '@/site-config'
+
+interface Props {
+  locale?: 'en' | 'zh'
+}
+
+const { locale = 'en' } = Astro.props
+const copyValues = config.integ.links?.applyTip ?? []
+const friendList = friendsData.friends[0]
+
+const text = locale === 'zh'
+  ? {
+      title: '友链',
+      directory: '博客友链',
+      directoryDescription: '一些值得拜访的站点',
+      apply: '交换友链',
+      applyDescription: '本站信息与申请参考',
+      copyHint: '点击任意一项复制',
+      feed: '朋友圈',
+      feedDescription: '来自友链 RSS 的文章可以展示在这里',
+      sample: '示例文章',
+      source: '示例博客',
+      date: '刚刚更新'
+    }
+  : {
+      title: 'Links',
+      directory: 'Blogroll',
+      directoryDescription: 'A small directory of sites worth visiting',
+      apply: 'Exchange links',
+      applyDescription: 'Reference details for blogroll requests',
+      copyHint: 'Select any value to copy it',
+      feed: 'Friend circle',
+      feedDescription: 'Recent posts from linked RSS feeds can appear here',
+      sample: 'A sample post from the blogroll',
+      source: 'Example Blog',
+      date: 'Updated recently'
+    }
+
+const headings = [
+  { depth: 2, slug: 'blogroll', text: text.directory },
+  { depth: 2, slug: 'exchange-links', text: text.apply },
+  { depth: 2, slug: 'friend-circle', text: text.feed }
+]
+---
+
+<CommonPage title={text.title} {headings}>
+  <div class='not-prose flex flex-col gap-12'>
+    <section class='flex flex-col gap-5'>
+      <header class='flex items-center gap-3 border-b border-border pb-4'>
+        <div class='grid size-10 place-items-center rounded-lg bg-muted text-primary'>
+          <Icon name='link' class='size-5' />
+        </div>
+        <div>
+          <h2 id='blogroll' class='text-xl font-semibold'>{text.directory}</h2>
+          <p class='text-sm text-muted-foreground'>{text.directoryDescription}</p>
+        </div>
+      </header>
+      <FriendList list={friendList} />
+    </section>
+
+    <section class='flex flex-col gap-5'>
+      <header class='flex items-center gap-3 border-b border-border pb-4'>
+        <div class='grid size-10 place-items-center rounded-lg bg-muted text-primary'>
+          <Icon name='info' class='size-5' />
+        </div>
+        <div>
+          <h2 id='exchange-links' class='text-xl font-semibold'>{text.apply}</h2>
+          <p class='text-sm text-muted-foreground'>{text.applyDescription}</p>
+        </div>
+      </header>
+      <div class='rounded-lg border border-border bg-card p-5'>
+        <p class='mb-4 text-sm text-muted-foreground'>{text.copyHint}</p>
+        <div class='grid gap-3 sm:grid-cols-2'>
+          {
+            copyValues.map(({ name, val }) => (
+              <button
+                type='button'
+                class='copy-value flex min-w-0 items-center justify-between gap-3 rounded-lg border border-border bg-background px-4 py-3 text-left transition-colors hover:bg-muted'
+                data-copy={val}
+              >
+                <span class='min-w-0'>
+                  <span class='block text-xs font-medium uppercase text-muted-foreground'>{name}</span>
+                  <span class='block truncate text-sm'>{val}</span>
+                </span>
+                <Icon name='document' class='size-4 shrink-0 text-muted-foreground' />
+              </button>
+            ))
+          }
+        </div>
+      </div>
+    </section>
+
+    <section class='flex flex-col gap-5'>
+      <header class='flex items-center gap-3 border-b border-border pb-4'>
+        <div class='grid size-10 place-items-center rounded-lg bg-muted text-primary'>
+          <Icon name='rss' class='size-5' />
+        </div>
+        <div>
+          <h2 id='friend-circle' class='text-xl font-semibold'>{text.feed}</h2>
+          <p class='text-sm text-muted-foreground'>{text.feedDescription}</p>
+        </div>
+      </header>
+      <article class='rounded-lg border border-border bg-card p-5'>
+        <div class='flex items-start justify-between gap-4'>
+          <div>
+            <p class='text-xs font-medium uppercase text-muted-foreground'>{text.source}</p>
+            <h3 class='mt-1 font-semibold'>{text.sample}</h3>
+          </div>
+          <span class='shrink-0 text-xs text-muted-foreground'>{text.date}</span>
+        </div>
+      </article>
+    </section>
+  </div>
+
+  <script>
+    document.querySelectorAll<HTMLButtonElement>('.copy-value').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const value = button.dataset.copy
+        if (!value) return
+        await navigator.clipboard.writeText(value)
+        document.dispatchEvent(new CustomEvent('toast', { detail: { message: 'Copied' } }))
+      })
+    })
+  </script>
+</CommonPage>

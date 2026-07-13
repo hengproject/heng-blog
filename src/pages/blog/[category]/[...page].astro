@@ -13,28 +13,19 @@ import {
   type SidebarCollection
 } from '@/server'
 import { Button, Icon } from '@/components/user'
+import { getBlogCategories } from '@/config/blog-categories'
 import PageLayout from '@/layouts/BaseLayout.astro'
 import config from '@/site-config'
 
 export const prerender = true
 
 export const getStaticPaths = (async ({ paginate }) => {
-  const categoryMap: Record<string, string> = {
-    'tech': 'Technical',
-    'daily': 'Daily Life',
-    'research': 'Research',
-    'journal': 'Month Journal',
-    'game': 'Game'
-  }
-  
-  const categoryOrder = ['research', 'tech', 'daily', 'journal', 'game']
-  
   const allCollections = await getBlogCollection()
   const allUniqueCategories = getUniqueCategories(allCollections)
+  const categories = getBlogCategories(allUniqueCategories)
+  const categoryMap = Object.fromEntries(categories.map(({ slug, name }) => [slug, name]))
   
-  const uniqueCategories = categoryOrder.filter(cat => allUniqueCategories.includes(cat))
-  
-  return uniqueCategories.flatMap((category, index) => {
+  return categories.flatMap(({ slug: category }, index) => {
     const collections = sortMDByDate(getCollectionsByCategory(allCollections, category))
     const uniqueTags = getUniqueTags(collections)
     const allSidebarCollections = getSidebarCollections(allCollections, 'zh', {
@@ -48,10 +39,10 @@ export const getStaticPaths = (async ({ paginate }) => {
     const collectionsCount = collections.length
     
     // Get previous and next categories (circular navigation)
-    const prevIndex = index === 0 ? uniqueCategories.length - 1 : index - 1
-    const nextIndex = index === uniqueCategories.length - 1 ? 0 : index + 1
-    const prevCategory = uniqueCategories[prevIndex]
-    const nextCategory = uniqueCategories[nextIndex]
+    const prevIndex = index === 0 ? categories.length - 1 : index - 1
+    const nextIndex = index === categories.length - 1 ? 0 : index + 1
+    const prevCategory = categories[prevIndex].slug
+    const nextCategory = categories[nextIndex].slug
     
     return paginate(collections, {
       params: { category },

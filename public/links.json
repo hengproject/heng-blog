@@ -1,0 +1,28 @@
+{
+  "friends": [
+    {
+      "id_name": "sample-links",
+      "desc": "Placeholder links for the starter blogroll",
+      "link_list": [
+        {
+          "name": "Design Notes",
+          "link": "https://example.com/design",
+          "avatar": "/images/link-placeholder.svg",
+          "intro": "A sample design and typography blog"
+        },
+        {
+          "name": "Field Journal",
+          "link": "https://example.com/journal",
+          "avatar": "/images/link-placeholder.svg",
+          "intro": "Essays, observations, and small discoveries"
+        },
+        {
+          "name": "Build Log",
+          "link": "https://example.com/builds",
+          "avatar": "/images/link-placeholder.svg",
+          "intro": "Notes from projects in progress"
+        }
+      ]
+    }
+  ]
+}
