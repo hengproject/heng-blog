@@ -18,7 +18,7 @@ export const theme: ThemeUserConfig = {
     }
   },
   logo: {
-    src: 'src/assets/avatar.svg',
+    src: 'src/assets/avatar.png',
     alt: 'Blog logo'
   },
   titleDelimiter: '•',

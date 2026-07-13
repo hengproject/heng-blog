@@ -1,17 +1,22 @@
 ---
+import { Image } from 'astro:assets'
 import { Button } from '@/components/user'
 import BlogStats from '@/components/home/BlogStats.astro'
 import PageLayout from '@/layouts/BaseLayout.astro'
 import Section from '@/components/home/Section.astro'
+import avatar from '@/assets/avatar.png'
 import config from '@/site-config'
 ---
 
 <PageLayout meta={{ title: 'Home' }} highlightColor='#659EB966'>
   <main class='flex w-full flex-col items-center'>
     <section class='animate mb-10 flex flex-col items-center gap-y-4 text-center' id='content-header'>
-      <div class='grid size-24 place-items-center rounded-lg border bg-muted text-3xl font-bold'>
-        {config.author.slice(0, 1)}
-      </div>
+      <Image
+        src={avatar}
+        alt={`${config.author} profile image`}
+        class='size-24 rounded-lg border object-cover p-1'
+        loading='eager'
+      />
       <div>
         <h1 class='text-3xl font-bold'>{config.title}</h1>
         <p class='mt-2 text-muted-foreground'>{config.description}</p>
