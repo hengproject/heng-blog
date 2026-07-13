@@ -4,6 +4,7 @@
 import { prod } from '@/utils/server'
 import type { SiteMeta } from '@/types'
 import config from '@/site-config'
+import avatar from '@/assets/avatar.png'
 
 type Props = SiteMeta
 
@@ -20,10 +21,9 @@ const socialImageURL = new URL(ogImage ? ogImage : '/images/social-card.svg', As
 <title>{siteTitle}</title>
 
 {/* Icons / Favicon */}
-<link rel='apple-touch-icon' sizes='180x180' href='/favicon/favicon.ico' />
-<link rel='icon' type='image/png' sizes='32x32' href='/favicon/favicon.ico' />
-<link rel='icon' type='image/png' sizes='16x16' href='/favicon/favicon.ico' />
-<link rel='manifest' href='/favicon/site.webmanifest' />
+<link rel='apple-touch-icon' href={avatar.src} />
+<link rel='icon' href={config.favicon ?? '/favicon.svg'} />
+<link rel='manifest' href='/site.webmanifest' />
 
 {/* Font preloads */}
 <link rel='preload' href='/fonts/Satoshi-Variable.ttf' as='font' type='font/ttf' crossorigin />

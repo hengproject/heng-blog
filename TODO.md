@@ -11,8 +11,8 @@ revisited before the site is considered production-ready.
   - Later: replace it with a final site icon derived from the blog identity or profile image.
 
 - [ ] **Apple touch icon**
-  - Planned location: `src/components/BaseHead.astro`
-  - Temporary replacement: use `src/assets/avatar.png` instead of the currently missing
+  - Location: `src/components/BaseHead.astro`
+  - Temporary replacement: uses `src/assets/avatar.png` instead of the previously missing
     `/favicon/favicon.ico`.
   - Later: provide a dedicated square touch icon with appropriate padding and export sizes.
 
@@ -64,13 +64,13 @@ revisited before the site is considered production-ready.
 ## Removed inherited features
 
 - [ ] **Analytics decision**
-  - Current location: inherited Google Analytics code in `src/layouts/BaseLayout.astro`.
-  - Planned fix: remove the unknown property ID.
+  - Previous location: inherited Google Analytics code in `src/layouts/BaseLayout.astro`.
+  - Current state: removed because the property owner was unknown.
   - Later: only add analytics with an account owned by Suheng and update the privacy policy at
     the same time.
 
 - [ ] **Live2D decision**
-  - Current location: inactive loader and styles in `src/layouts/BaseLayout.astro`.
-  - Planned fix: remove the loader because its required files do not exist.
+  - Previous location: inactive loader and styles in `src/layouts/BaseLayout.astro`.
+  - Current state: removed because its required files did not exist.
   - Later: restore it only with locally owned assets, an explicit loading strategy, and verified
     mobile behavior.
