@@ -161,7 +161,37 @@ and menu position.
 - `pnpm dev`: start the development server
 - `pnpm check`: validate Astro, TypeScript, and content
 - `pnpm build`: validate and build the site
+- `pnpm build:cloudflare`: build the static `dist/` directory used by Cloudflare Pages
 - `pnpm lint:check`: report lint issues
+
+## Deploy to Cloudflare Pages
+
+The site is built as platform-independent static files. The workflow at
+`.github/workflows/cloudflare-pages.yml` checks every pull request and deploys pushes to `main`.
+It can also be started manually from the GitHub Actions page.
+
+First create a Cloudflare Pages **Direct Upload** project. Then configure these GitHub repository
+settings under **Settings > Secrets and variables > Actions**:
+
+| Type     | Name                      | Value                                                     |
+| -------- | ------------------------- | --------------------------------------------------------- |
+| Secret   | `CLOUDFLARE_ACCOUNT_ID`   | Cloudflare account ID                                     |
+| Secret   | `CLOUDFLARE_API_TOKEN`    | Token with `Account / Cloudflare Pages / Edit` permission |
+| Variable | `CLOUDFLARE_PROJECT_NAME` | Exact Direct Upload project name                          |
+| Variable | `SITE_URL`                | Production origin, such as `https://blog.example.com`     |
+
+`SITE_URL` controls canonical URLs, the sitemap, RSS links, and robots metadata. Do not include a
+trailing slash. The deployment job deliberately fails when the project name or production URL is
+missing instead of publishing metadata that points to localhost.
+
+For local production verification, run:
+
+```bash
+SITE_URL=https://blog.example.com pnpm build:cloudflare
+pnpm preview --host 0.0.0.0
+```
+
+Cloudflare credentials are only used by GitHub Actions and must not be committed to `.env` files.
 
 ## Attribution
 
