@@ -19,6 +19,7 @@ interface GitHubActivityDay {
 
 interface GitHubActivityApiResponse {
   contributions: Array<GitHubActivityDay>
+  error?: string
   total: {
     lastYear: number
     [year: string]: number
@@ -34,7 +35,7 @@ async function fetchData(username: string): Promise<GitHubActivityApiResponse> {
   const response = await fetch(`${apiUrl}${username}?y=last`)
   const data = (await response.json()) as GitHubActivityApiResponse
   if (!response.ok) {
-    const message = (data as any).error || 'Unknown error'
+    const message = data.error || 'Unknown error'
     throw Error(`Fetching GitHub contribution data for "${username}" failed: ${message}`)
   }
   return data

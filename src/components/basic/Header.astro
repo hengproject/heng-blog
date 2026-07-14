@@ -42,7 +42,7 @@ const navLabels: Record<string, string> = {
     >
       <div class='flex flex-col items-center justify-center md:flex-row'>
         {
-          (config.header?.menu || []).map((item: any) => {
+          (config.header?.menu || []).map((item) => {
             const isBlogMenu = item.link === '/blog/research' || item.title === 'Blog'
             if (isBlogMenu && categories.length > 0) {
               return (

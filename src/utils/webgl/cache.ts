@@ -16,7 +16,9 @@ export function hasShownWarning(): boolean {
 export function markWarningShown(): void {
   try {
     localStorage.setItem(STORAGE_KEY, 'true')
-  } catch {}
+  } catch {
+    // Storage can be unavailable in privacy modes.
+  }
 }
 
 export function getCachedWebGLSupport(): WebGLSupportCache | null {
@@ -48,5 +50,7 @@ export function setCachedWebGLSupport(
       version: CACHE_VERSION
     }
     localStorage.setItem(WEBGL_CACHE_KEY, JSON.stringify(cacheData))
-  } catch {}
+  } catch {
+    // Caching is optional.
+  }
 }

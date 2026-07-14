@@ -1,15 +1,10 @@
 ---
 import { Image } from 'astro:assets'
+import type { InferEntrySchema } from 'astro:content'
 
 import { Icon } from '@/components/user'
 
-type CoverImage = {
-  src?: any
-  alt?: string
-  color?: string
-  width?: number
-  height?: number
-}
+type CoverImage = NonNullable<InferEntrySchema<'blog'>['heroImage']>
 
 type CollectionPreviewItem = {
   title: string
@@ -44,7 +39,7 @@ const cardLabel = 'COLLECTION'
           alt={collection.coverImage.alt || collection.title}
           class='cover-image absolute end-0 top-0 z-0 h-2/3 w-full object-cover opacity-50 transition-opacity duration-300 group-hover/card:opacity-70 md:h-full md:w-3/5'
           loading='eager'
-          src={collection.coverImage.src as any}
+          src={collection.coverImage.src}
           width={collection.coverImage.width || 1200}
           height={collection.coverImage.height || 630}
         />

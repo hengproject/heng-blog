@@ -11,5 +11,14 @@ export default [
   // Ignore files
   {
     ignores: ['public/scripts/*', 'scripts/*', '.astro/', 'src/env.d.ts']
+  },
+  {
+    files: ['src/scripts/**/*.{js,mjs}'],
+    languageOptions: {
+      globals: {
+        console: 'readonly',
+        process: 'readonly'
+      }
+    }
   }
 ]

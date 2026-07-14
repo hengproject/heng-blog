@@ -295,10 +295,16 @@ const { class: className = '' } = Astro.props;
 </style>
 
 <script>
+  import type { AStarConfig } from './algorithms/AStar'
+  import type { CellularAutomataConfig } from './algorithms/CellularAutomata'
+
   interface AlgorithmDeps {
     BoidsSystem: new (canvas: HTMLCanvasElement) => { destroy: () => void }
-    CellularAutomata: new (canvas: HTMLCanvasElement, config?: any) => { destroy: () => void }
-    AStar: new (canvas: HTMLCanvasElement, config?: any) => {
+    CellularAutomata: new (
+      canvas: HTMLCanvasElement,
+      config?: CellularAutomataConfig
+    ) => { destroy: () => void }
+    AStar: new (canvas: HTMLCanvasElement, config?: AStarConfig) => {
       destroy: () => void
       startPathfinding: () => Promise<void> | void
     }

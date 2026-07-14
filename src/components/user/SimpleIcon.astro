@@ -13,12 +13,13 @@ let iconSvg: string = ''
 try {
   const iconName = `si${name.charAt(0).toUpperCase() + name.slice(1)}`
   const icons = await import('simple-icons')
-  const iconData = (icons as any)[iconName]
+  const iconsByName = icons as unknown as Record<string, { svg: string } | undefined>
+  const iconData = iconsByName[iconName]
 
   if (iconData) {
     iconSvg = iconData.svg
   }
-} catch (error) {
+} catch {
   // 静默处理错误
 }
 ---
@@ -39,4 +40,3 @@ try {
     </div>
   )
 }
-

@@ -1,5 +1,6 @@
 ---
 import { cn } from '@/utils'
+import type { iconsType } from '@/types'
 import Icon from './Icon.astro'
 import SimpleIcon from './SimpleIcon.astro'
 
@@ -31,7 +32,11 @@ interface Props {
 
 const { class: className, publication } = Astro.props
 
-const linkIconMap: Record<string, { type: 'simple' | 'builtin'; icon: string; color?: string }> = {
+type LinkIconConfig =
+  | { type: 'simple'; icon: string; color?: string }
+  | { type: 'builtin'; icon: iconsType }
+
+const linkIconMap: Record<string, LinkIconConfig> = {
   pdf: { type: 'builtin', icon: 'document' },
   arxiv: { type: 'simple', icon: 'arxiv', color: '#B31B1B' },
   code: { type: 'simple', icon: 'github', color: '#181717' },
@@ -177,7 +182,7 @@ const symbolMutedClass = "text-muted-foreground/80 dark:text-slate-400/80";
                   color={iconConfig.color || 'currentColor'}
                 />
               ) : (
-                <Icon class='size-3.5 sm:size-4 text-current' name={iconConfig.icon as any} />
+                <Icon class='size-3.5 sm:size-4 text-current' name={iconConfig.icon} />
               )}
               <span class="hidden sm:inline">{link.type.toUpperCase()}</span>
               <span class="sm:hidden">{link.type.charAt(0).toUpperCase() + link.type.slice(1)}</span>

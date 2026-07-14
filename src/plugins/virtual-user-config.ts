@@ -39,7 +39,9 @@ export function vitePluginUserConfig(
       srcDir,
       trailingSlash
     })}`,
-    'virtual:starlight/user-css': (opts.customCss || []).map((id: any) => `import ${resolveId(id)};`).join(''),
+    'virtual:starlight/user-css': (opts.customCss || [])
+      .map((id) => `import ${resolveId(id)};`)
+      .join(''),
     'virtual:starlight/user-images': opts.logo
       ? 'src' in opts.logo
         ? `import src from ${resolveId(
@@ -73,5 +75,5 @@ export function vitePluginUserConfig(
       const resolution = resolutionMap[id]
       if (resolution) return modules[resolution]
     }
-  } as any
+  }
 }

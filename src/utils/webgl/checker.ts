@@ -24,7 +24,7 @@ export function backgroundCheckWebGL(): void {
         enableGradientBackground()
       }
     }
-  } catch (error) {
+  } catch {
     // Silent fail for background check
   }
 }
@@ -60,7 +60,7 @@ export function checkGraphicsSupport(): void {
     } else {
       enableGradientBackground()
     }
-  } catch (error) {
+  } catch {
     // Silent fail for graphics check
   }
 }

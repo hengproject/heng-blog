@@ -1,4 +1,4 @@
-import { defineCollection, z } from 'astro:content'
+import { defineCollection, z, type SchemaContext } from 'astro:content'
 import { glob } from 'astro/loaders'
 
 function removeDupsAndLowerCase(array: string[]) {
@@ -9,7 +9,7 @@ function removeDupsAndLowerCase(array: string[]) {
 }
 
 // Shared schema for both collections
-const blogSchema = ({ image }: { image: () => any }) =>
+const blogSchema = ({ image }: SchemaContext) =>
   z.object({
     // Required
     title: z.string().max(60),
