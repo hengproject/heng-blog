@@ -1,0 +1,286 @@
+---
+title: 从零实现 Transformer Decoder
+description: 实现 masked self-attention、cross-attention、前馈网络，并组合完整 Encoder-Decoder 模型。
+publishDate: 2025-04-30
+updatedDate: 2026-07-14
+category: research
+tags:
+  - transformer
+  - decoder
+  - pytorch
+draft: true
+translationStatus: draft
+---
+
+Transformer Decoder 在自回归生成中接收已经右移的目标序列，并结合 Encoder 输出预测下一个 token。与 Encoder Block 相比，它多了一层 cross-attention，同时 self-attention 必须使用 causal mask。
+
+> 本文整理自 [`hengproject/ML_recall`](https://github.com/hengproject/ML_recall) 中的 [`transformers/deocder.ipynb`](https://github.com/hengproject/ML_recall/blob/main/transformers/deocder.ipynb)、[`Decoder.py`](https://github.com/hengproject/ML_recall/blob/main/transformers/Decoder.py) 和 [`Model.py`](https://github.com/hengproject/ML_recall/blob/main/transformers/Model.py)。Encoder 实现见[上一篇](/blog/transformer-encoder)。
+
+## Decoder Block 的三层结构
+
+本文继续采用 Pre-LN。一个 Decoder Block 包含：
+
+1. **Masked self-attention**：目标序列内部建模，只允许关注当前位置及其之前的位置。
+2. **Cross-attention**：以 Decoder 状态作为 Query，以 Encoder 输出作为 Key 和 Value。
+3. **Feed-forward network**：对每个目标位置独立执行两层 MLP。
+
+每个子层前都做 LayerNorm，子层输出经过 Dropout 后与输入形成残差连接：
+
+```text
+target input
+    │
+    ├─ LN ─ masked self-attention ─ dropout ─ (+)
+    │                                             │
+    ├─ LN ─ cross-attention ─────── dropout ─ (+)
+    │              ▲                              │
+    │              └── encoder memory             │
+    │                                             │
+    └─ LN ─ feed-forward ────────── dropout ─ (+) ─ output
+```
+
+## Masked Self-Attention
+
+Self-attention 的 $Q$、$K$、$V$ 都来自 Decoder 当前状态。它同时使用两种 mask：
+
+- `tgt_padding_mask` 遮蔽目标序列中的 padding Key；
+- causal mask 遮蔽当前 Query 右侧的未来 Key。
+
+若不使用 causal mask，训练时每个位置都能直接看到未来的目标 token，模型会发生信息泄漏。推理时没有未来 token 可看，训练和推理行为将不一致。
+
+## Cross-Attention
+
+Cross-attention 连接 Encoder 与 Decoder：
+
+$$
+Q = X_{decoder},
+\qquad
+K = V = H_{encoder}.
+$$
+
+因此 Query 长度为 $n_{tgt}$，Key/Value 长度为 $n_{src}$，注意力权重形状为：
+
+$$
+(B,h,n_{tgt},n_{src}).
+$$
+
+这里使用源序列的 `memory_padding_mask`，而不是目标序列的 mask。Cross-attention 不需要 causal mask，因为完整源序列在编码阶段已经可用。
+
+## Decoder Block 实现
+
+```python
+import torch
+import torch.nn as nn
+
+class TransformerDecoderBlock(nn.Module):
+    def __init__(self, d_model, num_heads, dim_ff, dropout=0.1):
+        super().__init__()
+        self.self_attention = MultiHeadAttention(d_model, num_heads)
+        self.cross_attention = MultiHeadAttention(d_model, num_heads)
+        self.ffn = nn.Sequential(
+            nn.Linear(d_model, dim_ff),
+            nn.ReLU(),
+            nn.Linear(dim_ff, d_model),
+        )
+        self.norm1 = nn.LayerNorm(d_model)
+        self.norm2 = nn.LayerNorm(d_model)
+        self.norm3 = nn.LayerNorm(d_model)
+        self.dropout1 = nn.Dropout(dropout)
+        self.dropout2 = nn.Dropout(dropout)
+        self.dropout3 = nn.Dropout(dropout)
+
+    def forward(
+        self,
+        x,
+        encoder_output,
+        tgt_padding_mask=None,
+        memory_padding_mask=None,
+    ):
+        normalized = self.norm1(x)
+        self_attention_output, _ = self.self_attention(
+            normalized,
+            query=normalized,
+            key=normalized,
+            value=normalized,
+            padding_mask=tgt_padding_mask,
+            causal=True,
+        )
+        x = x + self.dropout1(self_attention_output)
+
+        normalized = self.norm2(x)
+        cross_attention_output, _ = self.cross_attention(
+            normalized,
+            query=normalized,
+            key=encoder_output,
+            value=encoder_output,
+            padding_mask=memory_padding_mask,
+            causal=False,
+        )
+        x = x + self.dropout2(cross_attention_output)
+
+        normalized = self.norm3(x)
+        ffn_output = self.ffn(normalized)
+        return x + self.dropout3(ffn_output)
+```
+
+这里要求 `MultiHeadAttention` 支持不同长度的 Query 与 Key/Value。Self-attention 中三者长度相同，而 cross-attention 中 $n_{tgt}$ 与 $n_{src}$ 可以不同。
+
+## 堆叠 Decoder Block
+
+```python
+class TransformerDecoder(nn.Module):
+    def __init__(
+        self,
+        d_model,
+        num_heads,
+        dim_ff,
+        num_layers,
+        dropout=0.1,
+    ):
+        super().__init__()
+        self.layers = nn.ModuleList(
+            [
+                TransformerDecoderBlock(
+                    d_model, num_heads, dim_ff, dropout
+                )
+                for _ in range(num_layers)
+            ]
+        )
+        self.final_norm = nn.LayerNorm(d_model)
+
+    def forward(
+        self,
+        x,
+        encoder_output,
+        tgt_padding_mask=None,
+        memory_padding_mask=None,
+    ):
+        for layer in self.layers:
+            x = layer(
+                x,
+                encoder_output,
+                tgt_padding_mask=tgt_padding_mask,
+                memory_padding_mask=memory_padding_mask,
+            )
+        return self.final_norm(x)
+```
+
+无论堆叠多少层，Decoder 的外部形状都保持 $(B,n_{tgt},d_{model})$。
+
+## 组合完整 Encoder-Decoder
+
+源序列与目标序列分别经过输入嵌入。Encoder 输出称为 `memory`，Decoder 输出再投影到词表维度，得到每个目标位置的 logits：
+
+```python
+class TransformerModel(nn.Module):
+    def __init__(
+        self,
+        vocab_size,
+        d_model,
+        num_heads,
+        dim_ff,
+        num_layers,
+        max_len=5000,
+        dropout=0.1,
+    ):
+        super().__init__()
+        self.source_embedding = InputEmbedding(
+            vocab_size, d_model, max_len
+        )
+        self.target_embedding = InputEmbedding(
+            vocab_size, d_model, max_len
+        )
+        self.encoder = TransformerEncoder(
+            d_model, num_heads, dim_ff, num_layers, dropout
+        )
+        self.decoder = TransformerDecoder(
+            d_model, num_heads, dim_ff, num_layers, dropout
+        )
+        self.output_projection = nn.Linear(d_model, vocab_size)
+
+    def forward(
+        self,
+        source_ids,
+        target_ids,
+        source_padding_mask=None,
+        target_padding_mask=None,
+    ):
+        source = self.source_embedding(source_ids)
+        target = self.target_embedding(target_ids)
+
+        memory = self.encoder(source, source_padding_mask)
+        output = self.decoder(
+            target,
+            memory,
+            tgt_padding_mask=target_padding_mask,
+            memory_padding_mask=source_padding_mask,
+        )
+        return self.output_projection(output)
+```
+
+输入输出形状为：
+
+| 张量           | 形状                    |
+| -------------- | ----------------------- |
+| `source_ids`   | $(B,n_{src})$           |
+| `target_ids`   | $(B,n_{tgt})$           |
+| Encoder memory | $(B,n_{src},d_{model})$ |
+| Decoder output | $(B,n_{tgt},d_{model})$ |
+| logits         | $(B,n_{tgt},V)$         |
+
+## 形状测试
+
+```python
+batch_size = 2
+source_length = 7
+target_length = 5
+vocab_size = 1000
+
+source_ids = torch.randint(
+    0, vocab_size, (batch_size, source_length)
+)
+target_ids = torch.randint(
+    0, vocab_size, (batch_size, target_length)
+)
+
+source_padding_mask = torch.tensor(
+    [
+        [0, 0, 0, 0, 0, 1, 1],
+        [0, 0, 0, 0, 0, 0, 1],
+    ]
+)
+target_padding_mask = torch.tensor(
+    [
+        [0, 0, 0, 1, 1],
+        [0, 0, 0, 0, 1],
+    ]
+)
+
+model = TransformerModel(
+    vocab_size=vocab_size,
+    d_model=512,
+    num_heads=8,
+    dim_ff=2048,
+    num_layers=4,
+)
+logits = model(
+    source_ids,
+    target_ids,
+    source_padding_mask,
+    target_padding_mask,
+)
+
+print(logits.shape)  # torch.Size([2, 5, 1000])
+```
+
+## 训练与生成时还缺什么
+
+上面的模块完成了核心前向传播，但一个可训练、可生成的序列模型还需要：
+
+- 将目标序列右移，以起始 token 作为 Decoder 的第一个输入；
+- 用未右移的目标序列计算交叉熵，并忽略 padding 位置；
+- 决定输入嵌入与输出投影是否共享权重；
+- 在生成时实现 greedy decoding、beam search 或 sampling，并维护停止条件；
+- 对全部被 mask 的行做保护，避免 softmax 产生 `NaN`；
+- 根据任务分别管理源词表、目标词表与特殊 token。
+
+Decoder 的核心逻辑可以概括为：先在已生成的目标前缀中建模，再从 Encoder memory 中检索源信息，最后通过 FFN 更新每个目标位置的表示。
