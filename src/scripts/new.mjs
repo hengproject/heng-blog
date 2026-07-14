@@ -1,18 +1,4 @@
-/**
- * Create a new post in the content directory
- *
- * Usage: astro-axi new [options] <post-title>
- *
- * Options:
- *   -l, --lang <en|zh>   Set the language (default: en)
- *   -d, --draft          Create a draft post (default: false)
- *   -m, --mdx            Use MDX format (default: false)
- *   -h, --help           Show this help message
- *
- * Example:
- *   astro-axi new "Hello World"
- *   astro-axi new -l zh "你好，世界"
- */
+/** Create a post that matches the content collections in src/content.config.ts. */
 
 import fs from 'node:fs'
 import path from 'node:path'
@@ -20,92 +6,121 @@ import path from 'node:path'
 import minimist from './libs/minimist.cjs'
 import slugify from './libs/slugify.cjs'
 
+const CONTENT_DIR = 'src/content/blog'
+const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u
+const CATEGORY_PATTERN = /^[a-z0-9]+(?:[-_][a-z0-9]+)*$/u
+const SUPPORTED_LOCALES = new Set(['zh', 'en'])
+
+const HELP_INFO = `Usage: pnpm new:post -- [options] <title>
+
+Options:
+  -s, --slug <slug>       Stable URL slug (required for titles that cannot be slugified)
+  -l, --lang <zh|en>      Content language (default: zh)
+  -c, --category <name>   Initial category (default: technical)
+  -m, --mdx               Create an MDX file
+  -p, --publish           Publish immediately instead of creating a draft
+  -h, --help              Show this help message
+
+Examples:
+  pnpm new:post -- --slug first-post "My first post"
+  pnpm new:post -- --slug first-post --lang en "My first post"
+`
+
 function getDate() {
   const date = new Date()
   const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0') // Month is 0-based
+  const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
-  const hours = String(date.getHours()).padStart(2, '0')
-  const minutes = String(date.getMinutes()).padStart(2, '0')
-  const seconds = String(date.getSeconds()).padStart(2, '0')
-
-  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+  return `${year}-${month}-${day}`
 }
 
-function getPostSlug(postTitle) {
-  let slug = slugify(postTitle).toLocaleLowerCase()
-  if (slug === '') {
-    slug = 'untitled'
-  }
-  return slug
+function getDerivedSlug(title) {
+  return slugify(title).toLocaleLowerCase()
 }
 
-const HELP_INFO = `Usage: astro-axi new [options] <post-title>
-
-Options:
-  -l, --lang           Set the language (default: null)
-  -d, --draft          Create a draft post (default: false)
-  -m, --mdx            Use MDX format (default: false)
-  -h, --help           Show this help message
-
-Example:
-  astro-axi new "Hello World"
-  astro-axi new -l zh "你好，世界"
-`
-const TARGET_DIR = 'src/content/blog/'
+function fail(message) {
+  console.error(`ERROR: ${message}`)
+  process.exitCode = 1
+}
 
 export default function main(args) {
   const parsedArgs = minimist(args, {
-    string: ['lang'],
-    boolean: ['draft', 'mdx', 'help'],
+    string: ['slug', 'lang', 'category'],
+    boolean: ['mdx', 'publish', 'help'],
     default: {
-      lang: null,
-      draft: false,
-      mdx: false
+      lang: 'zh',
+      category: 'technical',
+      mdx: false,
+      publish: false
     },
     alias: {
+      s: 'slug',
       l: 'lang',
-      d: 'draft',
+      c: 'category',
       m: 'mdx',
+      p: 'publish',
       h: 'help'
     }
   })
 
   if (parsedArgs.help) {
     console.log(HELP_INFO)
-    process.exit(0)
+    return
   }
 
-  let postTitle = parsedArgs._.join(' ') // join the rest of the arguments
-  if (!postTitle || postTitle.trim() === '') {
-    postTitle = 'Untitled'
+  const title = parsedArgs._.join(' ').trim()
+  if (!title) {
+    fail('A post title is required. Use --help for examples.')
+    return
   }
-  console.log('Creating new post:', postTitle)
 
-  const fileExtension = parsedArgs.mdx ? '.mdx' : '.md'
-  const fileName = getPostSlug(postTitle) + fileExtension
-  const fullPath = path.join(TARGET_DIR, fileName)
+  const locale = parsedArgs.lang.toLowerCase()
+  if (!SUPPORTED_LOCALES.has(locale)) {
+    fail(`Unsupported language "${parsedArgs.lang}". Use zh or en.`)
+    return
+  }
 
-  console.log('Full path:', fullPath)
+  const slug = (parsedArgs.slug || getDerivedSlug(title)).toLowerCase()
+  if (!slug) {
+    fail(
+      'This title cannot produce a URL slug. Pass one with --slug, for example --slug first-post.'
+    )
+    return
+  }
+  if (!SLUG_PATTERN.test(slug)) {
+    fail('The slug must contain lowercase letters, numbers, and single hyphens only.')
+    return
+  }
+  if (!CATEGORY_PATTERN.test(parsedArgs.category)) {
+    fail('The category must contain lowercase letters, numbers, hyphens, or underscores only.')
+    return
+  }
+
+  const extension = parsedArgs.mdx ? 'mdx' : 'md'
+  const fileName = locale === 'en' ? `index-en.${extension}` : `index.${extension}`
+  const postDir = path.join(CONTENT_DIR, slug)
+  const fullPath = path.join(postDir, fileName)
 
   if (fs.existsSync(fullPath)) {
-    console.error(`ERROR: File ${fullPath} already exists`)
-    process.exit(1)
+    fail(`File ${fullPath} already exists.`)
+    return
   }
 
-  let content = `---
-title: ${postTitle}
-description: 'Write your description here.'
+  const description = locale === 'en' ? 'Add a short description.' : '请补充简短摘要。'
+  const body = locale === 'en' ? 'Write your content here.' : '从这里开始写正文。'
+  const content = `---
+title: ${JSON.stringify(title)}
+description: ${JSON.stringify(description)}
 publishDate: ${getDate()}
-`
-  content += parsedArgs.draft ? 'draft: true\n' : ''
-  content += parsedArgs.lang ? `lang: ${parsedArgs.lang}\n` : ''
-  content += `tags: ['tag1', 'tag2']
+category: ${parsedArgs.category}
+tags: []
+draft: ${!parsedArgs.publish}
 ---
 
-Write your content here.
+${body}
 `
 
-  fs.writeFileSync(fullPath, content)
-  console.log(`Post "${postTitle}" created at ${fullPath}`)
+  fs.mkdirSync(postDir, { recursive: true })
+  fs.writeFileSync(fullPath, content, { flag: 'wx' })
+  console.log(`Created ${fullPath}`)
 }

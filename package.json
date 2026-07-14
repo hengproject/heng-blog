@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "astro dev",
     "dev:check": "astro check --watch & astro dev",
+    "new:post": "node src/scripts/index.js new",
     "build": "astro check && astro build",
     "build:cloudflare": "astro check && astro build",
     "preview": "astro preview",

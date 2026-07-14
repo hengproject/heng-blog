@@ -1,10 +1,27 @@
 ---
 import CommonPage from '@/layouts/CommonPage.astro'
-import { Aside, Button, Card, Collapse, Icon, Label, Spoiler, TabItem, Tabs, Timeline } from '@/components/user'
+import {
+  Aside,
+  Button,
+  Card,
+  Collapse,
+  Icon,
+  Label,
+  Spoiler,
+  TabItem,
+  Tabs,
+  Timeline
+} from '@/components/user'
 
 const timelineEvents = [
-  { date: 'Now', content: '<strong>Starter created</strong><p>Theme and component foundation.</p>' },
-  { date: 'Next', content: '<strong>Add content</strong><p>Replace these examples with your own work.</p>' }
+  {
+    date: 'Now',
+    content: '<strong>Starter created</strong><p>Theme and component foundation.</p>'
+  },
+  {
+    date: 'Next',
+    content: '<strong>Add content</strong><p>Replace these examples with your own work.</p>'
+  }
 ]
 ---
 
@@ -28,10 +45,21 @@ const timelineEvents = [
     <section class='flex flex-col gap-4' id='cards'>
       <h2 class='text-xl font-semibold'>Cards</h2>
       <div class='grid gap-4 md:grid-cols-2'>
-        <Card heading='Writing project' subheading='A flexible card for projects or links' date='2026'>
-          <p class='mt-2 text-sm text-muted-foreground'>Add any Astro content through the default slot.</p>
+        <Card
+          heading='Writing project'
+          subheading='A flexible card for projects or links'
+          date='2026'
+        >
+          <p class='mt-2 text-sm text-muted-foreground'>
+            Add any Astro content through the default slot.
+          </p>
         </Card>
-        <Card as='a' href='/blog/all' heading='Blog archive' subheading='Cards can also be links'>
+        <Card
+          as='a'
+          href='/blog/research'
+          heading='Blog archive'
+          subheading='Cards can also be links'
+        >
           <p class='mt-2 text-sm text-muted-foreground'>Hover to see the interactive state.</p>
         </Card>
       </div>
@@ -50,14 +78,18 @@ const timelineEvents = [
     <section class='flex flex-col gap-4'>
       <h2 class='text-xl font-semibold'>Interactive content</h2>
       <Collapse title='Expandable section'>
-        <p class='text-sm text-muted-foreground'>Collapsed content can hold text, links, or richer components.</p>
+        <p class='text-sm text-muted-foreground'>
+          Collapsed content can hold text, links, or richer components.
+        </p>
       </Collapse>
       <Tabs>
         <TabItem label='Writing'>
           <p class='text-sm text-muted-foreground'>Use tabs to organize related content.</p>
         </TabItem>
         <TabItem label='Projects'>
-          <p class='text-sm text-muted-foreground'>The second panel demonstrates the selected state.</p>
+          <p class='text-sm text-muted-foreground'>
+            The second panel demonstrates the selected state.
+          </p>
         </TabItem>
       </Tabs>
     </section>

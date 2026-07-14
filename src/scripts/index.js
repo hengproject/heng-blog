@@ -15,13 +15,15 @@ switch (args._[0]) {
   case 'check':
     await checkFunc()
     break
-  case 'new':
+  case 'new': {
     const newArgs = process.argv.slice(3)
+    if (newArgs[0] === '--') newArgs.shift()
     newFunc(newArgs)
     break
-  case 'info':
+  }
+  case 'info': {
     const __dirname = dirname(fileURLToPath(import.meta.url))
-    const packageJson = JSON.parse(readFileSync(join(__dirname, '../package.json'), 'utf8'))
+    const packageJson = JSON.parse(readFileSync(join(__dirname, '../../package.json'), 'utf8'))
     console.log()
     console.log('\x1b[46m%s\x1b[0m', ' Astro Theme Axi ')
     console.log('\nInformation:')
@@ -29,6 +31,7 @@ switch (args._[0]) {
     console.log(`- Node.js:\t${process.version}`)
     console.log(`- Platform:\t${process.platform}`)
     break
+  }
   case 'help':
     console.log('Usage:')
     console.log('  new [args] - Create new post on blog collection')

@@ -1,6 +1,9 @@
 ---
-import { Icon } from '@/components/user'
 import { getLocale, getLocalizedUrl, getTranslations } from '@/i18n'
+import { Icons } from '@/libs/icons'
+import type { iconsType } from '@/types'
+
+import { Icon } from '@/components/user'
 import config from '@/site-config'
 
 const year = new Date().getFullYear()
@@ -11,10 +14,13 @@ const policyUrl = getLocalizedUrl(locale, '/terms/list')
 const copyrightName = config.author_en ?? config.author
 
 // Create social links with RSS
-const socialLinks = {
-  ...(footerConf.social || {}),
+const socialLinks = Object.entries({
+  ...footerConf.social,
   rss: '/rss.xml'
-}
+}).filter(
+  (entry): entry is [iconsType, string] =>
+    entry[0] in Icons && typeof entry[1] === 'string' && entry[1].length > 0
+)
 ---
 
 <footer class='mx-auto mb-5 mt-16'>
@@ -24,19 +30,21 @@ const socialLinks = {
         class='flex items-center gap-x-4 gap-y-2 text-muted-foreground max-sm:flex-col [&_a:hover]:text-primary [&_a]:text-foreground'
       >
         {
-          footerConf.registration && (
+          footerConf.registration?.url && footerConf.registration.text && (
             <a
               class='text-xs'
               style='color:hsl(var(--muted-foreground)/var(--tw-text-opacity,1))'
               href={footerConf.registration.url}
               target='_blank'
+              rel='noopener noreferrer'
             >
               {footerConf.registration.text}
             </a>
           )
         }
         <span>
-          © {year} {copyrightName} ·
+          © {year}
+          {copyrightName} ·
           <a href={policyUrl}>{text.policy.title}</a>
         </span>
         {
@@ -58,13 +66,13 @@ const socialLinks = {
       {/* Social Brands */}
       <div class='flex items-center gap-x-4'>
         {
-          Object.entries(socialLinks).map(([platform, url]) => (
+          socialLinks.map(([platform, url]) => (
             <a
               class='inline-block text-muted-foreground transition-all hover:text-muted-foreground/75'
-              href={url as string}
+              href={url}
               aria-label={platform}
             >
-              <Icon name={platform as any} />
+              <Icon name={platform} />
             </a>
           ))
         }

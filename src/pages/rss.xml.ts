@@ -2,19 +2,19 @@ import type { AstroGlobal, ImageMetadata } from 'astro'
 import { getImage } from 'astro:assets'
 import type { CollectionEntry } from 'astro:content'
 import rss from '@astrojs/rss'
+import { getBlogCollection, sortMDByDate } from '@/server'
 import type { Root } from 'mdast'
 import rehypeStringify from 'rehype-stringify'
 import remarkParse from 'remark-parse'
 import remarkRehype from 'remark-rehype'
 import { unified } from 'unified'
 import { visit } from 'unist-util-visit'
-import config from '@/site-config'
 
-import { getBlogCollection, sortMDByDate } from '@/server'
+import config from '@/site-config'
 
 // Get dynamic import of images as a map collection
 const imagesGlob = import.meta.glob<{ default: ImageMetadata }>(
-  '/src/content/blog/**/*.{jpeg,jpg,png,gif}' // add more image formats if needed
+  '/src/content/blog/**/*.{avif,gif,jpeg,jpg,png,webp}'
 )
 
 const renderContent = async (post: CollectionEntry<'blog'>, site: URL) => {
@@ -68,14 +68,21 @@ const GET = async (context: AstroGlobal) => {
     description: config.description || 'A blog built with Astro',
     site: import.meta.env.SITE,
     items: await Promise.all(
-      allPostsByDate.map(async (post) => ({
-        pubDate: post.data.publishDate,
-        link: `/blog/${post.id}`,
-        customData: `<h:img src="${typeof post.data.heroImage?.src === 'string' ? post.data.heroImage?.src : post.data.heroImage?.src.src}" />
-          <enclosure url="${typeof post.data.heroImage?.src === 'string' ? post.data.heroImage?.src : post.data.heroImage?.src.src}" />`,
-        content: await renderContent(post, siteUrl),
-        ...post.data
-      }))
+      allPostsByDate.map(async (post) => {
+        const image =
+          (typeof post.data.heroImage?.src === 'string'
+            ? post.data.heroImage.src
+            : post.data.heroImage?.src.src) ?? '/images/social-card.svg'
+        const imageUrl = new URL(image, siteUrl).href
+
+        return {
+          pubDate: post.data.publishDate,
+          link: `/blog/${post.id}`,
+          customData: `<h:img src="${imageUrl}" /><enclosure url="${imageUrl}" />`,
+          content: await renderContent(post, siteUrl),
+          ...post.data
+        }
+      })
     )
   })
 }

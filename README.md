@@ -17,7 +17,18 @@ pnpm dev
 
 ## Add content
 
-Create a post at `src/content/blog/<slug>/index.md`:
+Create a draft from the command line:
+
+```bash
+pnpm new:post -- --slug my-first-post "My first post"
+```
+
+This creates `src/content/blog/my-first-post/index.md`. Add `--lang en` to create
+`index-en.md` in the same directory, `--mdx` for an MDX file, or `--publish` to set
+`draft: false` immediately. The command defaults to Chinese, the `technical` category, and
+`draft: true`; edit the generated frontmatter as needed.
+
+You can also create the files manually. Create a post at `src/content/blog/<slug>/index.md`:
 
 ```md
 ---
@@ -159,6 +170,7 @@ and menu position.
 ## Commands
 
 - `pnpm dev`: start the development server
+- `pnpm new:post -- --slug <slug> "<title>"`: create a draft post
 - `pnpm check`: validate Astro, TypeScript, and content
 - `pnpm build`: validate and build the site
 - `pnpm build:cloudflare`: build the static `dist/` directory used by Cloudflare Pages

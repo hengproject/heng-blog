@@ -19,8 +19,8 @@ const { class: className } = Astro.props
 }
 
 <script>
-  import { init as walineInit } from '@waline/client'
   import type { WalineEmojiPresets } from '@waline/client'
+
   import config from '@/site-config'
 
   const walineConfig = config.integ.waline
@@ -66,9 +66,11 @@ const { class: className } = Astro.props
       this.observer.observe(this)
     }
 
-    initWaline() {
+    async initWaline() {
       if (this.initialized) return
       this.initialized = true
+
+      const { init: walineInit } = await import('@waline/client')
 
       // Prevent Vue log errors
       ;(globalThis as unknown as { __VUE_OPTIONS_API__: boolean }).__VUE_OPTIONS_API__ = true
@@ -78,7 +80,7 @@ const { class: className } = Astro.props
       ).__VUE_PROD_HYDRATION_MISMATCH_DETAILS__ = false
 
       const emoji = walineConfig.emoji?.map(
-        (preset: any) => `${config.npmCDN}/@waline/emojis@1.2.0/${preset}` as WalineEmojiPresets
+        (preset: string) => `${config.npmCDN}/@waline/emojis@1.2.0/${preset}` as WalineEmojiPresets
       )
 
       const normalizePath = (path: string) => {
@@ -97,7 +99,9 @@ const { class: className } = Astro.props
     }
   }
 
-  if (walineConfig.enable) customElements.define('comment-component', Comment)
+  if (document.querySelector('comment-component') && !customElements.get('comment-component')) {
+    customElements.define('comment-component', Comment)
+  }
 </script>
 
 <style>

@@ -15,14 +15,14 @@ import { UserConfigSchema, type UserInputConfig } from './types/user-config'
 import { parseWithFriendlyErrors } from './utils/error-map'
 
 export default function AstroAxiIntegration(opts: UserInputConfig): AstroIntegration {
-  let integrations: AstroIntegration[] = []
-  let remarkPlugins: RemarkPlugins = []
-  let rehypePlugins: RehypePlugins = []
+  const integrations: AstroIntegration[] = []
+  const remarkPlugins: RemarkPlugins = []
+  const rehypePlugins: RehypePlugins = []
   return {
     name: 'astro-axi',
     hooks: {
       'astro:config:setup': async ({ config, updateConfig }) => {
-        let userConfig = parseWithFriendlyErrors(
+        const userConfig = parseWithFriendlyErrors(
           UserConfigSchema,
           opts,
           'Invalid config passed to astro-axi integration'
@@ -69,7 +69,6 @@ export default function AstroAxiIntegration(opts: UserInputConfig): AstroIntegra
 
         updateConfig({
           vite: {
-            // @ts-ignore
             plugins: [vitePluginUserConfig(userConfig, config)]
           },
           markdown: {
@@ -91,12 +90,17 @@ export default function AstroAxiIntegration(opts: UserInputConfig): AstroIntegra
         const targetDir = fileURLToPath(dir)
         const cwd = dirname(fileURLToPath(import.meta.url))
         const relativeDir = relative(cwd, targetDir)
-        return new Promise<void>((resolve) => {
-          spawn('npx', ['-y', 'pagefind', '--site', relativeDir], {
+        const npxCommand = process.platform === 'win32' ? 'npx.cmd' : 'npx'
+        return new Promise<void>((resolve, reject) => {
+          const child = spawn(npxCommand, ['--no-install', 'pagefind', '--site', relativeDir], {
             stdio: 'inherit',
-            shell: true,
             cwd
-          }).on('close', () => resolve())
+          })
+          child.on('error', reject)
+          child.on('close', (code) => {
+            if (code === 0) resolve()
+            else reject(new Error(`Pagefind exited with code ${code ?? 'unknown'}`))
+          })
         })
       }
     }
