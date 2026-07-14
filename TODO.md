@@ -28,6 +28,18 @@ revisited before the site is considered production-ready.
 
 ## Temporary content
 
+- [ ] **ML_recall research-note drafts**
+  - Locations: `src/content/blog/ml-weight-initialization/`,
+    `src/content/blog/batch-norm-vs-layer-norm/`,
+    `src/content/blog/from-additive-to-multi-head-attention/`,
+    `src/content/blog/transformer-input-embedding/`,
+    `src/content/blog/transformer-encoder/`, and
+    `src/content/blog/transformer-decoder/`.
+  - Current state: six Chinese MDX drafts migrated from the notebooks and implementation in
+    `hengproject/ML_recall`; each source is linked from its article.
+  - Later: review the mathematical and code explanations one article at a time, add English
+    `index-en.mdx` counterparts if needed, then change `draft` to `false` for publication.
+
 - [ ] **Home page introduction**
   - Locations: `src/i18n/locales/zh.ts` and `src/i18n/locales/en.ts`
   - Current state: starter instructions describing where to add Markdown or MDX posts.
