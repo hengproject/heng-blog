@@ -1,22 +1,17 @@
 // @ts-check
 
 import { rehypeHeadingIds } from '@astrojs/markdown-remark'
-// Adapters
-import vercel from '@astrojs/vercel'
-import cloudflare from '@astrojs/cloudflare'
-// Integrations
-import AstroAxiIntegration from './src/axi-integration.ts'
 import { defineConfig } from 'astro/config'
 // Rehype & remark packages
 import rehypeKatex from 'rehype-katex'
-import remarkMath from 'remark-math'
 import remarkGfm from 'remark-gfm'
+import remarkMath from 'remark-math'
 
+// Integrations
+import AstroAxiIntegration from './src/axi-integration.ts'
 // Others
 // import { visualizer } from 'rollup-plugin-visualizer'
 
-// Local integrations
-import { outputCopier } from './src/plugins/output-copier.ts'
 // Local rehype & remark plugins
 import rehypeAutolinkHeadings from './src/plugins/rehype-auto-link-headings.ts'
 // Shiki
@@ -30,14 +25,9 @@ import {
 } from './src/plugins/shiki-transformers.ts'
 import config from './src/site.config.ts'
 
-const platform = process.env.DEPLOYMENT_PLATFORM || 'vercel'
-const isCloudflare = platform === 'cloudflare'
-const isGithubPages = platform === 'github'
-
-// // Cloudflare 会自动注入 CF_PAGES=1，我们优先检测这个
-// const platform = process.env.CF_PAGES ? 'cloudflare' : (process.env.DEPLOYMENT_PLATFORM || 'vercel')
-// const isCloudflare = platform === 'cloudflare'
-// const isGithubPages = platform === 'github'
+// Astro commands can run beside the dev server. Keep their Vite dependency metadata isolated so
+// a check or production build cannot invalidate modules already loaded in the browser.
+const viteCacheScope = process.argv[2] === 'dev' ? 'dev' : 'build'
 
 // https://astro.build/config
 export default defineConfig({
@@ -55,8 +45,7 @@ export default defineConfig({
     }
   },
 
-  adapter: isGithubPages ? undefined : (isCloudflare ? cloudflare() : vercel()),
-  output: isGithubPages ? 'static' : (isCloudflare ? 'static' : 'server'),
+  output: 'static',
 
   image: {
     service: {
@@ -69,16 +58,11 @@ export default defineConfig({
     // sitemap(),
     // mdx(),
     // tailwind({ applyBaseStyles: false }),
-    AstroAxiIntegration(config),
+    AstroAxiIntegration(config)
     // (await import('@playform/compress')).default({
     //   SVG: false,
     //   Exclude: ['index.*.js']
-    // }),
-
-    // Temporary fix for the Vercel adapter; static targets do not need copied output.
-    ...(!isCloudflare && !isGithubPages
-      ? [outputCopier({ integ: ['sitemap', 'pagefind'] })]
-      : [])
+    // })
   ],
   // root: './my-project-directory',
 
@@ -125,6 +109,7 @@ export default defineConfig({
     }
   },
   vite: {
+    cacheDir: `node_modules/.vite/${viteCacheScope}`
     // plugins: [
     //   visualizer({
     //     emitFile: true,
