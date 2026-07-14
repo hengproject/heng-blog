@@ -1,0 +1,108 @@
+---
+title: Batch Normalization 与 Layer Normalization
+description: 从归一化维度、统计量来源和训练推理行为理解 BatchNorm 与 LayerNorm 的区别。
+publishDate: 2025-04-17
+updatedDate: 2026-07-14
+category: research
+tags:
+  - deep-learning
+  - normalization
+  - neural-network
+draft: true
+translationStatus: draft
+---
+
+Batch Normalization（BN）和 Layer Normalization（LN）都通过标准化激活值来改善神经网络的优化过程，但二者计算统计量的维度不同，因此适用场景也不同。
+
+> 本文整理自 [`hengproject/ML_recall`](https://github.com/hengproject/ML_recall) 中的 [`basics/Normalizations.ipynb`](https://github.com/hengproject/ML_recall/blob/main/basics/Normalizations.ipynb)。延伸讲解可参考 [Deep Learning Basics: Batch Normalization](https://www.youtube.com/watch?v=BZh1ltr5Rkg)。
+
+## Batch Normalization
+
+设一个 mini-batch 为 $\mathcal{B} = \{x_1, \ldots, x_m\}$，BN 首先按 batch 维度计算每个特征的均值与方差：
+
+$$
+\begin{aligned}
+\mu_{\mathcal{B}} &= \frac{1}{m}\sum_{i=1}^{m}x_i, \\
+\sigma_{\mathcal{B}}^2 &= \frac{1}{m}\sum_{i=1}^{m}(x_i - \mu_{\mathcal{B}})^2, \\
+\hat{x}_i &= \frac{x_i - \mu_{\mathcal{B}}}{\sqrt{\sigma_{\mathcal{B}}^2 + \epsilon}}, \\
+y_i &= \gamma\hat{x}_i + \beta.
+\end{aligned}
+$$
+
+$\gamma$ 和 $\beta$ 是可学习参数，使网络能够恢复或重新调整每个特征的尺度和偏移。
+
+下面是一个二维输入的 NumPy 实现，其中形状为 `(batch_size, features)`：
+
+```python
+import numpy as np
+
+np.random.seed(2025)
+batch_size = 100
+features = 20
+x = np.random.randn(batch_size, features)
+
+def batch_normalization(x, gamma, beta, eps=1e-9):
+    batch_mean = np.mean(x, axis=0, keepdims=True)
+    batch_var = np.var(x, axis=0, keepdims=True)
+    x_hat = (x - batch_mean) / np.sqrt(batch_var + eps)
+    return gamma * x_hat + beta
+
+y = batch_normalization(x, gamma=1, beta=0)
+print(y.shape, np.mean(y), np.var(y))
+```
+
+这里的 `axis=0` 表示：对 batch 中所有样本的同一个特征计算统计量。
+
+### 训练与推理
+
+训练时，BN 使用当前 mini-batch 的统计量，并维护均值和方差的移动估计。推理时通常使用训练期间累计的移动统计量，而不是依赖当前输入 batch。
+
+BN 往往能够：
+
+- 改善优化过程中的梯度传播；
+- 允许使用更高的学习率；
+- 降低网络对参数初始化的敏感度；
+- 引入依赖 mini-batch 的随机性，产生一定正则化效果。
+
+“减少 internal covariate shift”是 BN 原论文提出的解释，但后续研究表明，这并不足以完整解释 BN 的效果。实践中，更稳妥的理解是 BN 改变并平滑了优化问题的几何性质。
+
+## Layer Normalization
+
+LN 不在不同样本之间聚合统计量，而是对单个样本的特征维度进行归一化。对一个包含 $H$ 个特征的样本 $\mathcal{H} = \{x_1, \ldots, x_H\}$：
+
+$$
+\begin{aligned}
+\mu_{\mathcal{H}} &= \frac{1}{H}\sum_{i=1}^{H}x_i, \\
+\sigma_{\mathcal{H}}^2 &= \frac{1}{H}\sum_{i=1}^{H}(x_i - \mu_{\mathcal{H}})^2, \\
+\hat{x}_i &= \frac{x_i - \mu_{\mathcal{H}}}{\sqrt{\sigma_{\mathcal{H}}^2 + \epsilon}}, \\
+y_i &= \gamma\hat{x}_i + \beta.
+\end{aligned}
+$$
+
+对应的 NumPy 实现只需改变统计维度：
+
+```python
+def layer_normalization(x, gamma, beta, eps=1e-9):
+    layer_mean = np.mean(x, axis=1, keepdims=True)
+    layer_var = np.var(x, axis=1, keepdims=True)
+    x_hat = (x - layer_mean) / np.sqrt(layer_var + eps)
+    return gamma * x_hat + beta
+
+gamma = np.ones((1, features))
+beta = np.zeros((1, features))
+y = layer_normalization(x, gamma, beta)
+print(y.shape, np.mean(y), np.var(y))
+```
+
+这里的 `axis=1` 表示：分别对每个样本内部的所有特征计算统计量。LN 不依赖同一 batch 中的其他样本，因此训练与推理时的计算方式一致。
+
+## BN 与 LN 的选择
+
+| 对比项              | Batch Normalization             | Layer Normalization                  |
+| ------------------- | ------------------------------- | ------------------------------------ |
+| 统计范围            | 同一特征跨 batch 中的样本       | 单个样本内部的特征                   |
+| 对 batch 大小的依赖 | 有，小 batch 下统计量可能不稳定 | 无                                   |
+| 训练与推理行为      | 使用不同来源的统计量            | 一致                                 |
+| 常见场景            | CNN、较大且稳定的 batch         | Transformer、RNN、变长序列、小 batch |
+
+需要注意，真实张量往往不止两个维度。例如卷积网络中的 `BatchNorm2d` 会按通道统计 batch 与空间位置，而 Transformer 的 `LayerNorm` 通常只作用于最后的隐藏维度。判断归一化行为时，应先明确张量形状和被归约的轴。
