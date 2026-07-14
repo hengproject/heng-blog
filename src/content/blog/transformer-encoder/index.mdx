@@ -1,0 +1,199 @@
+---
+title: 从零实现 Transformer Encoder
+description: 拆解 Pre-LN Encoder Block、自注意力、前馈网络、残差连接与多层堆叠。
+publishDate: 2025-04-21
+updatedDate: 2026-07-14
+category: research
+tags:
+  - transformer
+  - encoder
+  - pytorch
+draft: true
+translationStatus: draft
+---
+
+Transformer Encoder 将输入序列编码为上下文化表示。每个 block 包含两个子层：Multi-Head Self-Attention 和逐位置 Feed-Forward Network（FFN），并用残差连接、LayerNorm 与 Dropout 稳定训练。
+
+> 本文整理自 [`hengproject/ML_recall`](https://github.com/hengproject/ML_recall) 中的 [`transformers/encoder.ipynb`](https://github.com/hengproject/ML_recall/blob/main/transformers/encoder.ipynb)。注意力与输入表示分别见[注意力机制](/blog/from-additive-to-multi-head-attention)和[输入嵌入](/blog/transformer-input-embedding)。
+
+## Encoder Block 的数据流
+
+原始 Transformer 使用 Post-LN，即先执行子层和残差相加，再归一化。本文实现 Pre-LN，将 LayerNorm 放在每个子层之前：
+
+```text
+x ── LayerNorm ── Self-Attention ── Dropout ── (+) ── x'
+│                                                   ▲
+└───────────────────────────────────────────────────┘
+
+x' ─ LayerNorm ── Feed-Forward ───── Dropout ── (+) ── output
+│                                                   ▲
+└───────────────────────────────────────────────────┘
+```
+
+对应公式为：
+
+$$
+\begin{aligned}
+x' &= x + \operatorname{Dropout}(\operatorname{MHA}(\operatorname{LN}(x))), \\
+y &= x' + \operatorname{Dropout}(\operatorname{FFN}(\operatorname{LN}(x'))).
+\end{aligned}
+$$
+
+Pre-LN 为残差分支提供更直接的梯度路径，通常比深层 Post-LN 模型更容易优化。不过两种结构都仍在使用，具体选择应与模型架构和训练方案保持一致。
+
+## Multi-Head Self-Attention
+
+在 Encoder 的 self-attention 中，Query、Key、Value 都来自同一个归一化后的输入：
+
+$$
+Q = K = V = \operatorname{LN}(x).
+$$
+
+Encoder 不使用 causal mask，因为每个非 padding 位置都允许关注完整输入序列。Padding mask 的形状通常为 $(B,n)$，它只遮蔽 Key 侧的 padding 位置。
+
+## Feed-Forward Network
+
+FFN 独立作用于每个序列位置，参数在所有位置之间共享：
+
+$$
+\operatorname{FFN}(x)
+= W_2\,\phi(W_1x+b_1)+b_2.
+$$
+
+第一层把最后一维从 $d_{model}$ 扩展到 $d_{ff}$，非线性激活后再投影回 $d_{model}$，从而能够与残差分支相加。
+
+## Encoder Block 实现
+
+下面的 `MultiHeadAttention` 沿用前一篇的接口，输入与输出形状均为 $(B,n,d_{model})$。
+
+```python
+import torch
+import torch.nn as nn
+
+class TransformerEncoderBlock(nn.Module):
+    def __init__(self, d_model, num_heads, dim_ff, dropout=0.1):
+        super().__init__()
+        self.attention = MultiHeadAttention(d_model, num_heads)
+        self.ffn = nn.Sequential(
+            nn.Linear(d_model, dim_ff),
+            nn.ReLU(),
+            nn.Linear(dim_ff, d_model),
+        )
+        self.norm1 = nn.LayerNorm(d_model)
+        self.norm2 = nn.LayerNorm(d_model)
+        self.dropout1 = nn.Dropout(dropout)
+        self.dropout2 = nn.Dropout(dropout)
+
+    def forward(self, x, padding_mask=None):
+        normalized = self.norm1(x)
+        attention_output, _ = self.attention(
+            normalized,
+            padding_mask=padding_mask,
+            causal=False,
+        )
+        x = x + self.dropout1(attention_output)
+
+        normalized = self.norm2(x)
+        ffn_output = self.ffn(normalized)
+        return x + self.dropout2(ffn_output)
+```
+
+残差连接要求每个子层输出都保持 $(B,n,d_{model})$。`dim_ff` 只在 FFN 内部使用，不会改变 block 的外部接口。
+
+## 堆叠多个 Block
+
+`nn.ModuleList` 可以注册多个独立 block。每层拥有自己的参数，但接收相同的 padding mask：
+
+```python
+class TransformerEncoder(nn.Module):
+    def __init__(
+        self,
+        d_model,
+        num_heads,
+        dim_ff,
+        num_layers,
+        dropout=0.1,
+    ):
+        super().__init__()
+        self.layers = nn.ModuleList(
+            [
+                TransformerEncoderBlock(
+                    d_model, num_heads, dim_ff, dropout
+                )
+                for _ in range(num_layers)
+            ]
+        )
+        self.final_norm = nn.LayerNorm(d_model)
+
+    def forward(self, x, padding_mask=None):
+        for layer in self.layers:
+            x = layer(x, padding_mask=padding_mask)
+        return self.final_norm(x)
+```
+
+对 Pre-LN 架构，在整个 stack 末尾增加一次 LayerNorm 是常见做法。它不是单个 block 的第三个子层，而是对堆叠后的最终表示做归一化。
+
+## 接入输入嵌入
+
+完整 Encoder 先把 token ID 转换为带位置信息的向量，再送入 block stack：
+
+```python
+class TransformerEncoderModel(nn.Module):
+    def __init__(
+        self,
+        vocab_size,
+        d_model,
+        num_heads,
+        dim_ff,
+        num_layers,
+        max_len=5000,
+        dropout=0.1,
+    ):
+        super().__init__()
+        self.input_embedding = InputEmbedding(
+            vocab_size, d_model, max_len
+        )
+        self.encoder = TransformerEncoder(
+            d_model, num_heads, dim_ff, num_layers, dropout
+        )
+
+    def forward(self, input_ids, padding_mask=None):
+        x = self.input_embedding(input_ids)
+        return self.encoder(x, padding_mask=padding_mask)
+```
+
+## 形状测试
+
+```python
+batch_size = 2
+seq_len = 10
+vocab_size = 1000
+d_model = 512
+
+input_ids = torch.randint(0, vocab_size, (batch_size, seq_len))
+padding_mask = torch.tensor(
+    [
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1, 1, 1, 1, 1, 1],
+    ]
+)
+
+model = TransformerEncoderModel(
+    vocab_size=vocab_size,
+    d_model=d_model,
+    num_heads=8,
+    dim_ff=2048,
+    num_layers=6,
+)
+output = model(input_ids, padding_mask)
+
+print(input_ids.shape)  # torch.Size([2, 10])
+print(output.shape)     # torch.Size([2, 10, 512])
+```
+
+## 实现注意点
+
+- Mask 遮蔽 Key 位置后，padding 对应的 Query 位置仍可能产生非零输出；下游若要求这些位置严格为零，需要在 block 外再次清零或在损失中忽略。
+- 原论文 FFN 使用 ReLU，现代模型也常用 GELU、SwiGLU 等激活与门控结构。
+- `d_model` 必须能被 `num_heads` 整除；`dim_ff` 则是独立的容量超参数。
+- 位置编码、Dropout 和注意力内部的投影偏置都会影响完整复现，不能只比较 block 的主干公式。
