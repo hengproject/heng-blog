@@ -50,4 +50,23 @@ const blogEn = defineCollection({
   schema: blogSchema
 })
 
-export const collections = { blog, blogEn }
+const localizedText = z.object({
+  zh: z.string().min(1),
+  en: z.string().min(1)
+})
+
+const series = defineCollection({
+  loader: glob({ base: './src/content/collections', pattern: '**/*.{yaml,yml}' }),
+  schema: z.object({
+    title: localizedText,
+    description: localizedText,
+    posts: z
+      .array(z.string().min(1))
+      .min(1)
+      .refine((posts) => new Set(posts).size === posts.length, {
+        message: 'A post can only appear once in a collection'
+      })
+  })
+})
+
+export const collections = { blog, blogEn, series }

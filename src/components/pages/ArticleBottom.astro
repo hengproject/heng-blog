@@ -1,11 +1,11 @@
 ---
-import type { CollectionEntry, CollectionKey } from 'astro:content'
+import type { BlogEntry } from '@/server'
 
 import { cn } from '@/utils'
 
 type Props = {
   id: string
-  collections: CollectionEntry<CollectionKey>[]
+  collections: BlogEntry[]
   class?: string
 }
 

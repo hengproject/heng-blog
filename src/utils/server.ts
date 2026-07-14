@@ -1,6 +1,8 @@
-import { getCollection, type CollectionEntry, type CollectionKey } from 'astro:content'
+import { getCollection, type CollectionEntry } from 'astro:content'
 
-type Collections = CollectionEntry<CollectionKey>[]
+export type BlogCollectionKey = 'blog' | 'blogEn'
+export type BlogEntry = CollectionEntry<'blog'> | CollectionEntry<'blogEn'>
+type Collections = BlogEntry[]
 
 export interface SidebarCollection {
   key: string
@@ -10,11 +12,32 @@ export interface SidebarCollection {
   count: number
 }
 
+export interface PostCollectionContext {
+  key: string
+  title: string
+  href: string
+  position: number
+  total: number
+  items: Array<{
+    title: string
+    href: string
+    current: boolean
+  }>
+  previous?: {
+    title: string
+    href: string
+  }
+  next?: {
+    title: string
+    href: string
+  }
+}
+
 export const prod = import.meta.env.PROD
 
 /** Note: this function filters out draft posts based on the environment */
-export async function getBlogCollection(contentType: CollectionKey = 'blog') {
-  return await getCollection(contentType, ({ data }: CollectionEntry<typeof contentType>) => {
+export async function getBlogCollection() {
+  return await getCollection('blog', ({ data }) => {
     // Not in production & draft is not false
     return prod ? !data.draft : true
   })
@@ -23,13 +46,10 @@ export async function getBlogCollection(contentType: CollectionKey = 'blog') {
 /**
  * Get posts with an explicit English source file.
  */
-export async function getBlogCollectionEn(contentType: CollectionKey = 'blogEn') {
-  const englishPosts = await getCollection(
-    contentType,
-    ({ data }: CollectionEntry<typeof contentType>) => {
-      return prod ? !data.draft : true
-    }
-  )
+export async function getBlogCollectionEn() {
+  const englishPosts = await getCollection('blogEn', ({ data }) => {
+    return prod ? !data.draft : true
+  })
 
   const transformedEnglishPosts = englishPosts.map((post) => ({
     ...post,
@@ -43,14 +63,14 @@ export function getPostSlug(id: string) {
   return id.replace(/\/index(?:-en)?(?:\.(?:md|mdx))?$/u, '')
 }
 
-function getYearFromCollection<T extends CollectionKey>(
+function getYearFromCollection<T extends BlogCollectionKey>(
   collection: CollectionEntry<T>
 ): number | undefined {
   const dateStr = collection.data.updatedDate ?? collection.data.publishDate
   return dateStr ? new Date(dateStr).getFullYear() : undefined
 }
-export function groupCollectionsByYear<T extends CollectionKey>(
-  collections: Collections
+export function groupCollectionsByYear<T extends BlogCollectionKey>(
+  collections: CollectionEntry<T>[]
 ): [number, CollectionEntry<T>[]][] {
   const collectionsByYear = collections.reduce((acc, collection) => {
     const year = getYearFromCollection(collection)
@@ -141,39 +161,59 @@ export function getCollectionsByCategory(collections: Collections, category: str
   return collections.filter((collection) => collection.data.category === category)
 }
 
-const sidebarCollectionRules = [
-  {
-    key: 'starter-series',
-    title: {
-      zh: 'Starter Series',
-      en: 'Starter Series'
-    },
-    description: {
-      zh: 'A placeholder collection for a connected series of posts',
-      en: 'A placeholder collection for a connected series of posts'
-    },
-    slugPrefix: 'starter-series-',
-    entryHref: '/blog/starter-series-1'
+let seriesEntriesPromise: ReturnType<typeof loadSeriesEntries> | undefined
+
+async function loadSeriesEntries() {
+  const [seriesEntries, chinesePosts, englishPosts] = await Promise.all([
+    getCollection('series'),
+    getCollection('blog'),
+    getCollection('blogEn')
+  ])
+  const availableSlugs = new Set(
+    [...chinesePosts, ...englishPosts].map((post) => getPostSlug(post.id))
+  )
+  const assignedSlugs = new Map<string, string>()
+
+  for (const series of seriesEntries) {
+    for (const slug of series.data.posts) {
+      if (!availableSlugs.has(slug)) {
+        throw new Error(`Collection "${series.id}" references missing post "${slug}"`)
+      }
+      const existingSeries = assignedSlugs.get(slug)
+      if (existingSeries) {
+        throw new Error(
+          `Post "${slug}" belongs to both "${existingSeries}" and "${series.id}" collections`
+        )
+      }
+      assignedSlugs.set(slug, series.id)
+    }
   }
-] as const
 
-type SidebarRule = (typeof sidebarCollectionRules)[number]
+  return seriesEntries
+}
 
-export function getSidebarCollections(
+function getSeriesEntries() {
+  seriesEntriesPromise ??= loadSeriesEntries()
+  return seriesEntriesPromise
+}
+
+export async function getSidebarCollections(
   collections: Collections,
   locale: 'zh' | 'en' = 'zh',
   options: {
     preferCategory?: string
     limit?: number
   } = {}
-): SidebarCollection[] {
+): Promise<SidebarCollection[]> {
+  const seriesEntries = await getSeriesEntries()
   const localePrefix = locale === 'en' ? '/en' : ''
   const { preferCategory, limit } = options
 
-  const items = sidebarCollectionRules
-    .map((rule, index) => {
+  const items = seriesEntries
+    .map((series, index) => {
+      const postSlugs = new Set(series.data.posts)
       const matchedPosts = collections.filter((collection) =>
-        getPostSlug(collection.id).startsWith(rule.slugPrefix)
+        postSlugs.has(getPostSlug(collection.id))
       )
       const count = matchedPosts.length
       const categoryMatched =
@@ -183,10 +223,10 @@ export function getSidebarCollections(
 
       return {
         index,
-        key: rule.key,
-        title: rule.title[locale],
-        description: rule.description[locale],
-        href: `${localePrefix}/collection/${rule.key}`,
+        key: series.id,
+        title: series.data.title[locale],
+        description: series.data.description[locale],
+        href: `${localePrefix}/collection/${series.id}`,
         count,
         categoryMatched
       }
@@ -210,16 +250,54 @@ export function getSidebarCollections(
   }))
 }
 
-export function getSidebarCollectionRule(key: string): SidebarRule | undefined {
-  return sidebarCollectionRules.find((rule) => rule.key === key)
-}
-
-export function getCollectionPostsByKey<T extends CollectionKey>(
+export async function getCollectionPostsByKey<T extends BlogCollectionKey>(
   collections: CollectionEntry<T>[],
   key: string
 ) {
-  const rule = getSidebarCollectionRule(key)
-  if (!rule) return []
+  const series = (await getSeriesEntries()).find((entry) => entry.id === key)
+  if (!series) return []
 
-  return collections.filter((collection) => getPostSlug(collection.id).startsWith(rule.slugPrefix))
+  const postsBySlug = new Map(collections.map((post) => [getPostSlug(post.id), post]))
+  return series.data.posts.flatMap((slug) => {
+    const post = postsBySlug.get(slug)
+    return post ? [post] : []
+  })
+}
+
+export async function getPostCollectionContext(
+  postId: string,
+  collections: Collections,
+  locale: 'zh' | 'en'
+): Promise<PostCollectionContext | undefined> {
+  const slug = getPostSlug(postId)
+  const series = (await getSeriesEntries()).find((entry) => entry.data.posts.includes(slug))
+  if (!series) return undefined
+
+  const postsBySlug = new Map(collections.map((post) => [getPostSlug(post.id), post]))
+  const localePrefix = locale === 'en' ? '/en' : ''
+  const items = series.data.posts.flatMap((postSlug) => {
+    const post = postsBySlug.get(postSlug)
+    return post
+      ? [
+          {
+            title: post.data.title,
+            href: `${localePrefix}/blog/${postSlug}`,
+            current: postSlug === slug
+          }
+        ]
+      : []
+  })
+  const currentIndex = items.findIndex((item) => item.current)
+  if (currentIndex === -1) return undefined
+
+  return {
+    key: series.id,
+    title: series.data.title[locale],
+    href: `${localePrefix}/collection/${series.id}`,
+    position: currentIndex + 1,
+    total: items.length,
+    items,
+    previous: items[currentIndex - 1],
+    next: items[currentIndex + 1]
+  }
 }

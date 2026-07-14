@@ -1,16 +1,15 @@
 ---
 import type { GetStaticPaths } from 'astro'
-
-import { getCategoryPageData } from '@/utils/category-pages'
 import { getBlogCollectionEn } from '@/server'
 
 import CategoryPage from '@/components/blog/CategoryPage.astro'
+import { getCategoryPageData } from '@/utils/category-pages'
 import config from '@/site-config'
 
 export const prerender = true
 
 export const getStaticPaths = (async ({ paginate }) => {
-  const categoryPages = getCategoryPageData(await getBlogCollectionEn(), 'en')
+  const categoryPages = await getCategoryPageData(await getBlogCollectionEn(), 'en')
 
   return categoryPages.flatMap(({ posts, props }) =>
     paginate(posts, {

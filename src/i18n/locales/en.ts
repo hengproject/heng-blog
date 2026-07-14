@@ -65,6 +65,12 @@ export default {
     viewByYear: 'View all posts by year',
     collections: 'Collections',
     viewAllCollections: 'View all collections',
+    series: 'Series',
+    seriesContents: 'Series contents',
+    seriesNavigation: 'Article series navigation',
+    previousArticle: 'Previous',
+    nextArticle: 'Next',
+    currentArticle: 'Current article',
     tags: 'Tags',
     viewAll: 'View all',
     back: 'Back'

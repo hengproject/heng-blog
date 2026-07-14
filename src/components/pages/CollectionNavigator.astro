@@ -1,0 +1,125 @@
+---
+import { getTranslations } from '@/i18n'
+import type { PostCollectionContext } from '@/server'
+
+import { Icon } from '@/components/user'
+
+interface Props {
+  collection: PostCollectionContext
+  locale: 'zh' | 'en'
+}
+
+const { collection, locale } = Astro.props
+const currentNumber = String(collection.position).padStart(2, '0')
+const totalNumber = String(collection.total).padStart(2, '0')
+const text = getTranslations(locale).blog
+---
+
+<section class='not-prose mt-6 rounded-lg border border-border bg-muted/20'>
+  <header class='flex items-start justify-between gap-4 px-4 py-3 sm:px-5'>
+    <div class='min-w-0'>
+      <p class='text-xs text-muted-foreground'>{text.series}</p>
+      <a
+        class='mt-0.5 block truncate font-medium text-foreground hover:text-primary'
+        href={collection.href}
+        data-astro-prefetch
+      >
+        {collection.title}
+      </a>
+    </div>
+    <span class='shrink-0 font-mono text-sm tabular-nums text-muted-foreground'>
+      <strong class='font-semibold text-foreground'>{currentNumber}</strong>
+      <span aria-hidden='true'> / </span>
+      <span>{totalNumber}</span>
+    </span>
+  </header>
+
+  <nav
+    class='grid min-h-12 grid-cols-[1fr_auto_1fr] items-stretch border-t border-border'
+    aria-label={text.seriesNavigation}
+  >
+    {
+      collection.previous ? (
+        <a
+          class='flex min-w-0 items-center gap-2 px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:px-4'
+          href={collection.previous.href}
+          rel='prev'
+          data-astro-prefetch
+          title={collection.previous.title}
+        >
+          <Icon name='chevron-down' class='size-4 shrink-0 rotate-90' />
+          <span class='truncate'>{text.previousArticle}</span>
+        </a>
+      ) : (
+        <span class='flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground/40 sm:px-4'>
+          <Icon name='chevron-down' class='size-4 shrink-0 rotate-90' />
+          <span>{text.previousArticle}</span>
+        </span>
+      )
+    }
+
+    <details class='collection-menu relative border-x border-border'>
+      <summary
+        class='flex h-full cursor-pointer list-none items-center gap-1.5 px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted sm:px-4'
+      >
+        <span>{text.seriesContents}</span>
+        <Icon name='chevron-down' class='menu-chevron size-4 transition-transform' />
+      </summary>
+      <ol
+        class='absolute left-1/2 z-40 mt-1 max-h-80 w-[min(90vw,28rem)] -translate-x-1/2 overflow-y-auto rounded-lg border border-border bg-background p-1 shadow-lg'
+      >
+        {
+          collection.items.map((item, index) => (
+            <li>
+              <a
+                class:list={[
+                  'grid grid-cols-[2rem_1fr] gap-2 rounded-md px-2 py-2 text-sm transition-colors hover:bg-muted',
+                  item.current ? 'bg-muted font-medium text-primary' : 'text-foreground'
+                ]}
+                href={item.href}
+                aria-current={item.current ? 'page' : undefined}
+                data-astro-prefetch
+              >
+                <span class='font-mono tabular-nums text-muted-foreground'>
+                  {String(index + 1).padStart(2, '0')}
+                </span>
+                <span>{item.title}</span>
+                {item.current && <span class='sr-only'>({text.currentArticle})</span>}
+              </a>
+            </li>
+          ))
+        }
+      </ol>
+    </details>
+
+    {
+      collection.next ? (
+        <a
+          class='flex min-w-0 items-center justify-end gap-2 px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:px-4'
+          href={collection.next.href}
+          rel='next'
+          data-astro-prefetch
+          title={collection.next.title}
+        >
+          <span class='truncate'>{text.nextArticle}</span>
+          <Icon name='chevron-down' class='size-4 shrink-0 -rotate-90' />
+        </a>
+      ) : (
+        <span class='flex items-center justify-end gap-2 px-3 py-2 text-sm text-muted-foreground/40 sm:px-4'>
+          <span>{text.nextArticle}</span>
+          <Icon name='chevron-down' class='size-4 shrink-0 -rotate-90' />
+        </span>
+      )
+    }
+  </nav>
+</section>
+
+<style>
+  .collection-menu[open] .menu-chevron {
+    transform: rotate(180deg);
+  }
+
+  .collection-menu summary::-webkit-details-marker {
+    display: none;
+  }
+</style>

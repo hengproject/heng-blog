@@ -1,14 +1,15 @@
 ---
 import { Image } from 'astro:assets'
-import { render, type CollectionEntry, type CollectionKey } from 'astro:content'
+import { render } from 'astro:content'
+import { getLocalizedUrl } from '@/i18n'
+import type { BlogEntry } from '@/server'
 import type { HTMLTag, Polymorphic } from 'astro/types'
 
-import { getLocalizedUrl } from '@/i18n'
-import { cn } from '@/utils'
 import { Button, FormattedDate, Icon } from '@/components/user'
+import { cn } from '@/utils'
 
 type Props<Tag extends HTMLTag> = Polymorphic<{ as: Tag }> & {
-  post: CollectionEntry<CollectionKey>
+  post: BlogEntry
   detailed?: boolean
   class?: string
 }
@@ -26,14 +27,15 @@ try {
 }
 const postDate = data.updatedDate ?? data.publishDate
 
-const heroImageProps = data.heroImage ? {
-  src: data.heroImage.src,
-  alt: data.heroImage.alt,
-  color: data.heroImage.color,
-  width: data.heroImage.width || 1200,
-  height: data.heroImage.height || 630
-} : undefined
-
+const heroImageProps = data.heroImage
+  ? {
+      src: data.heroImage.src,
+      alt: data.heroImage.alt,
+      color: data.heroImage.color,
+      width: data.heroImage.width || 1200,
+      height: data.heroImage.height || 630
+    }
+  : undefined
 ---
 
 <li
@@ -140,7 +142,11 @@ const heroImageProps = data.heroImage ? {
       <ul class='tag-list mt-1 flex flex-wrap gap-2'>
         {data.tags.map((tag: string) => (
           <li>
-            <Button title={tag} href={getLocalizedUrl(Astro.currentLocale, `/tags/${tag}`)} style='pill' />
+            <Button
+              title={tag}
+              href={getLocalizedUrl(Astro.currentLocale, `/tags/${tag}`)}
+              style='pill'
+            />
           </li>
         ))}
       </ul>

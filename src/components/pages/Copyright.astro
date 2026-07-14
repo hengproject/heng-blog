@@ -1,13 +1,13 @@
 ---
-import type { CollectionKey, InferEntrySchema } from 'astro:content'
+import type { InferEntrySchema } from 'astro:content'
 
 import { QRCode } from '@/components/advanced'
 import { Icon } from '@/components/user'
 import { cn, getFormattedDate } from '@/utils'
 import config from '@/site-config'
 
-interface Props<T extends CollectionKey> {
-  data: InferEntrySchema<T>
+interface Props {
+  data: InferEntrySchema<'blog'> | InferEntrySchema<'blogEn'>
   class?: string
 }
 

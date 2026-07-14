@@ -167,6 +167,40 @@ automatically creates `/blog/notes` after the first matching post is added. Add 
 `BLOG_CATEGORIES` only when the category should exist while empty or needs a custom display name
 and menu position.
 
+## Collections
+
+Collections are ordered series of posts. Their metadata and article order live in YAML manifests,
+separate from the posts themselves:
+
+```text
+src/content/collections/<collection-id>.yaml
+```
+
+For example:
+
+```yaml
+title:
+  zh: 机器学习基础回顾
+  en: Machine Learning Recall
+description:
+  zh: 从训练基础到 Transformer 的系列笔记。
+  en: Notes from training fundamentals to Transformers.
+posts:
+  - ml-weight-initialization
+  - batch-norm-vs-layer-norm
+  - transformer-encoder
+```
+
+Each value in `posts` is an article directory name from `src/content/blog/`. The array order is
+the reading order and drives the collection page, the `01 / 03` progress label, and the previous,
+next, and article-picker links shown between the article header and body. Do not add collection
+metadata to individual article frontmatter.
+
+The build fails when a manifest references a missing post, repeats a post, or assigns the same post
+to more than one collection. A collection is shown in a locale only when at least one listed post
+has that locale's content file. Add `index-en.md(x)` alongside the Chinese article to make that
+entry available in the English series.
+
 ## Commands
 
 - `pnpm dev`: start the development server

@@ -63,6 +63,12 @@ export default {
     viewByYear: '按年份查看全部文章',
     collections: '合集',
     viewAllCollections: '查看全部合集',
+    series: '系列',
+    seriesContents: '系列目录',
+    seriesNavigation: '文章系列导航',
+    previousArticle: '上一篇',
+    nextArticle: '下一篇',
+    currentArticle: '当前文章',
     tags: '标签',
     viewAll: '查看全部',
     back: '返回'

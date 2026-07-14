@@ -1,9 +1,7 @@
 ---
 import type { Page } from 'astro'
-import type { CollectionEntry, CollectionKey } from 'astro:content'
-
 import { getTranslations, type Locale } from '@/i18n'
-import type { SidebarCollection } from '@/server'
+import type { BlogEntry, SidebarCollection } from '@/server'
 
 import PageLayout from '@/layouts/BaseLayout.astro'
 import { Paginator, PostPreview } from '@/components/pages'
@@ -11,7 +9,7 @@ import { Button, Icon } from '@/components/user'
 
 interface Props {
   locale: Locale
-  page: Page<CollectionEntry<CollectionKey>>
+  page: Page<BlogEntry>
   uniqueTags: string[]
   sidebarCollections: SidebarCollection[]
   hasMoreCollections: boolean
@@ -81,17 +79,15 @@ const meta = {
                 {text.blog.page} {page.currentPage} {text.blog.showing} {page.data.length}{' '}
                 {text.blog.of} {collectionsCount} {text.blog.posts}
               </span>
-              <a
-                aria-label={text.blog.viewByYear}
-                href={`${prefix}/archives`}
-                data-astro-prefetch
-              >
+              <a aria-label={text.blog.viewByYear} href={`${prefix}/archives`} data-astro-prefetch>
                 {text.blog.viewByYear} →
               </a>
             </div>
 
             <ul class='flex flex-col gap-y-4 text-start'>
-              {page.data.map((post) => <PostPreview {post} detailed />)}
+              {page.data.map((post) => (
+                <PostPreview {post} detailed />
+              ))}
             </ul>
             <Paginator currentPage={page.currentPage} lastPage={page.lastPage} url={page.url} />
           </section>
@@ -151,11 +147,7 @@ const meta = {
                     ))}
                   </ul>
                   <span class='mt-4 block sm:text-end'>
-                    <a
-                      aria-label={text.blog.viewAll}
-                      href={`${prefix}/tags`}
-                      data-astro-prefetch
-                    >
+                    <a aria-label={text.blog.viewAll} href={`${prefix}/tags`} data-astro-prefetch>
                       {text.blog.viewAll} →
                     </a>
                   </span>
