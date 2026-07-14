@@ -1,6 +1,10 @@
 import config from '@/site-config'
 
-const dateFormat = new Intl.DateTimeFormat(config.locale.dateLocale, config.locale.dateOptions)
+const dateOptions: Intl.DateTimeFormatOptions = {
+  timeZone: 'UTC',
+  ...config.locale.dateOptions
+}
+const dateFormat = new Intl.DateTimeFormat(config.locale.dateLocale, dateOptions)
 
 export function getFormattedDate(
   date: string | number | Date,
@@ -8,7 +12,7 @@ export function getFormattedDate(
 ) {
   if (typeof options !== 'undefined') {
     return new Date(date).toLocaleDateString(config.locale.dateLocale, {
-      ...(config.locale.dateOptions as Intl.DateTimeFormatOptions),
+      ...dateOptions,
       ...options
     })
   }

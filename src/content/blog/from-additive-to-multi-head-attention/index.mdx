@@ -118,7 +118,7 @@ $$
 = \operatorname{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V.
 $$
 
-### 为什么除以 $\sqrt{d_k}$
+### 为什么要缩放点积
 
 假设 $q_i$ 与 $k_i$ 独立、均值为零且方差为一，则点积的期望与方差为：
 
