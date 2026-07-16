@@ -12,7 +12,7 @@ const publicationText = publication?.trim() || 'pending'
 ---
 
 <div class='rounded-xl border p-4'>
-  <div class='flex min-w-0 flex-nowrap items-center gap-2 overflow-hidden'>
+  <div class='flex min-w-0 flex-wrap items-center gap-2 sm:flex-nowrap sm:overflow-hidden'>
     <div class='inline-flex min-w-0 max-w-[18rem] items-stretch gap-2 rounded-full border pe-3'>
       <span
         class='flex shrink-0 items-center rounded-full bg-primary-foreground px-2.5 text-sm text-primary'
@@ -40,7 +40,9 @@ const publicationText = publication?.trim() || 'pending'
       )
     }
     <div class='inline-flex shrink-0 items-stretch gap-2 rounded-full border pe-3'>
-      <span class='flex shrink-0 items-center rounded-full bg-emerald-100 px-2.5 text-sm text-emerald-700'>
+      <span
+        class='flex shrink-0 items-center rounded-full bg-emerald-100 px-2.5 text-sm text-emerald-700'
+      >
         publication
       </span>
       <samp class='text-foreground'>{publicationText}</samp>
