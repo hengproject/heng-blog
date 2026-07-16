@@ -1,0 +1,4 @@
+interface:
+  display_name: "Release"
+  short_description: "Run the Heng Blog release workflow in order"
+  default_prompt: "Run the Heng Blog release workflow through pre-publish, publish, and post-publish in order."
