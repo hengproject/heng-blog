@@ -252,19 +252,19 @@ src/content/
 
 `ml-basics.yaml` currently defines this reading order:
 
-| Order | Slug                       | Article                                    | Status |
-| ----- | -------------------------- | ------------------------------------------ | ------ |
-| 01    | `ml-weight-initialization` | 深度学习中的权重初始化                     | Draft  |
-| 02    | `batch-norm-vs-layer-norm` | Batch Normalization 与 Layer Normalization | Draft  |
+| Order | Slug                       | Article                                    | Status    |
+| ----- | -------------------------- | ------------------------------------------ | --------- |
+| 01    | `ml-weight-initialization` | 深度学习中的权重初始化                     | Published |
+| 02    | `batch-norm-vs-layer-norm` | Batch Normalization 与 Layer Normalization | Published |
 
 `transformer.yaml` currently defines this reading order:
 
-| Order | Slug                                    | Article                                       | Status |
-| ----- | --------------------------------------- | --------------------------------------------- | ------ |
-| 01    | `from-additive-to-multi-head-attention` | 从 Additive Attention 到 Multi-Head Attention | Draft  |
-| 02    | `transformer-input-embedding`           | Transformer 的输入嵌入与位置编码              | Draft  |
-| 03    | `transformer-encoder`                   | 从零实现 Transformer Encoder                  | Draft  |
-| 04    | `transformer-decoder`                   | 从零实现 Transformer Decoder                  | Draft  |
+| Order | Slug                                    | Article                                       | Status    |
+| ----- | --------------------------------------- | --------------------------------------------- | --------- |
+| 01    | `from-additive-to-multi-head-attention` | 从 Additive Attention 到 Multi-Head Attention | Published |
+| 02    | `transformer-input-embedding`           | Transformer 的输入嵌入与位置编码              | Published |
+| 03    | `transformer-encoder`                   | 从零实现 Transformer Encoder                  | Published |
+| 04    | `transformer-decoder`                   | 从零实现 Transformer Decoder                  | Published |
 
 The manifest remains the source of truth. Update these tables when adding, removing, reordering, or
 publishing an article so this overview stays in sync with the YAML and article frontmatter.

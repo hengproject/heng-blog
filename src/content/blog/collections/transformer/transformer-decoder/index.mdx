@@ -2,19 +2,19 @@
 title: 从零实现 Transformer Decoder
 description: 实现 masked self-attention、cross-attention、前馈网络，并组合完整 Encoder-Decoder 模型。
 publishDate: 2025-04-30
-updatedDate: 2026-07-14
+updatedDate: 2026-07-16
 category: research
 tags:
   - transformer
   - decoder
   - pytorch
-draft: true
-translationStatus: draft
+draft: false
+translationStatus: complete
 ---
 
 Transformer Decoder 在自回归生成中接收已经右移的目标序列，并结合 Encoder 输出预测下一个 token。与 Encoder Block 相比，它多了一层 cross-attention，同时 self-attention 必须使用 causal mask。
 
-> 本文整理自 [`hengproject/ML_recall`](https://github.com/hengproject/ML_recall) 中的 [`transformers/deocder.ipynb`](https://github.com/hengproject/ML_recall/blob/main/transformers/deocder.ipynb)、[`Decoder.py`](https://github.com/hengproject/ML_recall/blob/main/transformers/Decoder.py) 和 [`Model.py`](https://github.com/hengproject/ML_recall/blob/main/transformers/Model.py)。Encoder 实现见[上一篇](/blog/transformer-encoder)。
+> 本文整理自 [`hengproject/ML_recall`](https://github.com/hengproject/ML_recall) 中的 [`transformers/deocder.ipynb`](https://github.com/hengproject/ML_recall/blob/master/transformers/deocder.ipynb)、[`Decoder.py`](https://github.com/hengproject/ML_recall/blob/master/transformers/Decoder.py) 和 [`Model.py`](https://github.com/hengproject/ML_recall/blob/master/transformers/Model.py)。Encoder 实现见[上一篇](/blog/transformer-encoder)。
 
 ## Decoder Block 的三层结构
 
@@ -97,10 +97,7 @@ class TransformerDecoderBlock(nn.Module):
     ):
         normalized = self.norm1(x)
         self_attention_output, _ = self.self_attention(
-            normalized,
             query=normalized,
-            key=normalized,
-            value=normalized,
             padding_mask=tgt_padding_mask,
             causal=True,
         )

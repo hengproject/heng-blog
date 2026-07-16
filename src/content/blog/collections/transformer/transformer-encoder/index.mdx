@@ -2,19 +2,19 @@
 title: 从零实现 Transformer Encoder
 description: 拆解 Pre-LN Encoder Block、自注意力、前馈网络、残差连接与多层堆叠。
 publishDate: 2025-04-21
-updatedDate: 2026-07-14
+updatedDate: 2026-07-16
 category: research
 tags:
   - transformer
   - encoder
   - pytorch
-draft: true
-translationStatus: draft
+draft: false
+translationStatus: complete
 ---
 
 Transformer Encoder 将输入序列编码为上下文化表示。每个 block 包含两个子层：Multi-Head Self-Attention 和逐位置 Feed-Forward Network（FFN），并用残差连接、LayerNorm 与 Dropout 稳定训练。
 
-> 本文整理自 [`hengproject/ML_recall`](https://github.com/hengproject/ML_recall) 中的 [`transformers/encoder.ipynb`](https://github.com/hengproject/ML_recall/blob/main/transformers/encoder.ipynb)。注意力与输入表示分别见[注意力机制](/blog/from-additive-to-multi-head-attention)和[输入嵌入](/blog/transformer-input-embedding)。
+> 本文整理自 [`hengproject/ML_recall`](https://github.com/hengproject/ML_recall) 中的 [`transformers/encoder.ipynb`](https://github.com/hengproject/ML_recall/blob/master/transformers/encoder.ipynb)。注意力与输入表示分别见[注意力机制](/blog/from-additive-to-multi-head-attention)和[输入嵌入](/blog/transformer-input-embedding)。
 
 ## Encoder Block 的数据流
 

@@ -2,19 +2,19 @@
 title: Transformer 的输入嵌入与位置编码
 description: 解释 Token Embedding、正弦余弦位置编码及其 PyTorch 实现与张量形状。
 publishDate: 2025-04-21
-updatedDate: 2026-07-14
+updatedDate: 2026-07-16
 category: research
 tags:
   - transformer
   - embedding
   - positional-encoding
-draft: true
-translationStatus: draft
+draft: false
+translationStatus: complete
 ---
 
 Transformer 的输入表示通常由 Token Embedding 与 Positional Encoding 相加得到。前者表示 token 的语义，后者为不具备循环结构的注意力网络提供顺序信息。
 
-> 本文整理自 [`hengproject/ML_recall`](https://github.com/hengproject/ML_recall) 中的 [`transformers/input_embedding.ipynb`](https://github.com/hengproject/ML_recall/blob/main/transformers/input_embedding.ipynb)，公式来自 [_Attention Is All You Need_](https://arxiv.org/abs/1706.03762)。
+> 本文整理自 [`hengproject/ML_recall`](https://github.com/hengproject/ML_recall) 中的 [`transformers/input_embedding.ipynb`](https://github.com/hengproject/ML_recall/blob/master/transformers/input_embedding.ipynb)，公式来自 [_Attention Is All You Need_](https://arxiv.org/abs/1706.03762)。
 
 ## Token Embedding
 
