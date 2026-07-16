@@ -1,0 +1,4 @@
+interface:
+  display_name: "Publish"
+  short_description: "Push and deploy a validated Heng Blog release"
+  default_prompt: "Publish the already validated Heng Blog change to GitHub and Cloudflare Pages."

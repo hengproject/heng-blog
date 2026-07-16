@@ -1,0 +1,4 @@
+interface:
+  display_name: "Pre-publish"
+  short_description: "Run the fixed Heng Blog release gate"
+  default_prompt: "Run the deterministic pre-publish checks for Heng Blog without changing Git or production."

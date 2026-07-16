@@ -1,0 +1,4 @@
+interface:
+  display_name: "Post-publish"
+  short_description: "Verify GitHub and Cloudflare after publishing"
+  default_prompt: "Run read-only post-publish verification for the latest Heng Blog release."

@@ -1,4 +1,0 @@
-interface:
-  display_name: "Publish Site Release"
-  short_description: "Commit and deploy Heng Blog safely"
-  default_prompt: "Publish the validated Heng Blog changes to GitHub and Cloudflare Pages, then verify production."

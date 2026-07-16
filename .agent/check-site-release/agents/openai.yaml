@@ -1,4 +1,0 @@
-interface:
-  display_name: "Check Site Release"
-  short_description: "Validate Heng Blog before a release"
-  default_prompt: "Run the complete pre-release validation for Heng Blog without committing or deploying."
