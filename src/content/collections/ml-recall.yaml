@@ -4,6 +4,7 @@ title:
 description:
   zh: 从神经网络训练基础到 Transformer 编码器与解码器的系列笔记。
   en: Notes from neural-network training fundamentals to Transformer encoders and decoders.
+# Directory placement alone does not add a post. This list controls membership and reading order.
 posts:
   - ml-weight-initialization
   - batch-norm-vs-layer-norm

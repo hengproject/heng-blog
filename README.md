@@ -28,6 +28,16 @@ This creates `src/content/blog/my-first-post/index.md`. Add `--lang en` to creat
 `draft: false` immediately. The command defaults to Chinese, the `technical` category, and
 `draft: true`; edit the generated frontmatter as needed.
 
+To store a post with the rest of a collection, pass its collection key:
+
+```bash
+pnpm new:post -- --slug next-note --mdx --collection ml-recall "Next note"
+```
+
+This creates `src/content/blog/collections/ml-recall/next-note/index.mdx`, but deliberately does not
+add it to the collection. Add its slug to `src/content/collections/ml-recall.yaml` when it is ready
+to join the series. The order of the `posts` array is the reading order.
+
 You can also create the files manually. Create a post at `src/content/blog/<slug>/index.md`:
 
 ```md
@@ -208,20 +218,24 @@ posts:
   - transformer-encoder
 ```
 
-Each value in `posts` is an article directory name from `src/content/blog/`. The array order is
-the reading order and drives the collection page, the `01 / 03` progress label, and the previous,
+Store a collection's article directories under
+`src/content/blog/collections/<collection-id>/<post-slug>/`. Physical placement does not add an
+article to a collection: each slug must also appear in the manifest's `posts` array. The array order
+is the reading order and drives the collection page, the `01 / 03` progress label, and the previous,
 next, and article-picker links shown between the article header and body. Do not add collection
 metadata to individual article frontmatter.
 
-The build fails when a manifest references a missing post, repeats a post, or assigns the same post
-to more than one collection. A collection is shown in a locale only when at least one listed post
-has that locale's content file. Add `index-en.md(x)` alongside the Chinese article to make that
-entry available in the English series.
+The build fails when a manifest references a missing post, points to a post outside its matching
+collection directory, repeats a post, or assigns the same post to more than one collection. A
+collection is shown in a locale only when at least one listed post has that locale's content file.
+Add `index-en.md(x)` alongside the Chinese article to make that entry available in the English
+series.
 
 ## Commands
 
 - `pnpm dev`: start the development server
-- `pnpm new:post -- --slug <slug> "<title>"`: create a draft post
+- `pnpm new:post -- --slug <slug> "<title>"`: create a standalone draft post
+- `pnpm new:post -- --slug <slug> --collection <id> --mdx "<title>"`: create an unlisted collection draft
 - `pnpm check`: validate Astro, TypeScript, and content
 - `pnpm build`: validate and build the site
 - `pnpm build:cloudflare`: build the static `dist/` directory used by Cloudflare Pages

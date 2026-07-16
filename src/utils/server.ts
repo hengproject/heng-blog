@@ -172,12 +172,26 @@ async function loadSeriesEntries() {
   const availableSlugs = new Set(
     [...chinesePosts, ...englishPosts].map((post) => getPostSlug(post.id))
   )
+  const postsBySlug = new Map<string, BlogEntry[]>()
+  for (const post of [...chinesePosts, ...englishPosts]) {
+    const slug = getPostSlug(post.id)
+    postsBySlug.set(slug, [...(postsBySlug.get(slug) ?? []), post])
+  }
   const assignedSlugs = new Map<string, string>()
 
   for (const series of seriesEntries) {
     for (const slug of series.data.posts) {
       if (!availableSlugs.has(slug)) {
         throw new Error(`Collection "${series.id}" references missing post "${slug}"`)
+      }
+      const expectedDirectory = `src/content/blog/collections/${series.id}/${slug}/`
+      const misplacedPost = postsBySlug
+        .get(slug)
+        ?.find((post) => !post.filePath?.replaceAll('\\', '/').startsWith(expectedDirectory))
+      if (misplacedPost) {
+        throw new Error(
+          `Collection "${series.id}" post "${slug}" must be stored under "${expectedDirectory}"`
+        )
       }
       const existingSeries = assignedSlugs.get(slug)
       if (existingSeries) {

@@ -8,6 +8,12 @@ function removeDupsAndLowerCase(array: string[]) {
   return Array.from(distinctItems)
 }
 
+function generatePostId({ entry }: { entry: string }) {
+  const normalizedEntry = entry.replaceAll('\\', '/')
+  const postDirectory = normalizedEntry.replace(/\/index(?:-en)?\.(?:md|mdx)$/u, '')
+  return postDirectory.split('/').at(-1) ?? postDirectory
+}
+
 // Shared schema for both collections
 const blogSchema = ({ image }: SchemaContext) =>
   z.object({
@@ -40,13 +46,21 @@ const blogSchema = ({ image }: SchemaContext) =>
 
 const blog = defineCollection({
   // Load Chinese version: index.md or index.mdx
-  loader: glob({ base: './src/content/blog', pattern: '**/index.{md,mdx}' }),
+  loader: glob({
+    base: './src/content/blog',
+    pattern: '**/index.{md,mdx}',
+    generateId: generatePostId
+  }),
   schema: blogSchema
 })
 
 const blogEn = defineCollection({
   // Load English version: index-en.md or index-en.mdx
-  loader: glob({ base: './src/content/blog', pattern: '**/index-en.{md,mdx}' }),
+  loader: glob({
+    base: './src/content/blog',
+    pattern: '**/index-en.{md,mdx}',
+    generateId: generatePostId
+  }),
   schema: blogSchema
 })
 

@@ -25,11 +25,14 @@ const renderContent = async (post: CollectionEntry<'blog'>, site: URL) => {
      */
     return async function (tree: Root) {
       const promises: Promise<void>[] = []
+      const sourceDirectory = post.filePath
+        ? post.filePath.split('/').slice(0, -1).join('/')
+        : `src/content/blog/${post.id}`
       visit(tree, 'image', (node) => {
         if (node.url.startsWith('/images')) {
           node.url = `${site}${node.url.replace('/', '')}`
         } else {
-          const imagePathPrefix = `/src/content/blog/${post.id}/${node.url.replace('./', '')}`
+          const imagePathPrefix = `/${sourceDirectory}/${node.url.replace('./', '')}`
           const promise = imagesGlob[imagePathPrefix]?.().then(async (res) => {
             const imagePath = res?.default
             if (imagePath) {
