@@ -46,12 +46,16 @@ const initialWidth = Math.max(320, defaultWidth)
     private dialog: HTMLDialogElement | null = null
     private trigger: HTMLButtonElement | null = null
     private resizer: HTMLElement | null = null
+    private header: HTMLElement | null = null
     private previousBodyOverflow = ''
+    private swipeStartX = 0
+    private swipeStartTime = 0
 
     connectedCallback() {
       this.dialog = this.querySelector('.info-drawer-dialog')
       this.trigger = this.querySelector('.info-drawer-trigger')
       this.resizer = this.querySelector('.info-drawer-resizer')
+      this.header = this.querySelector('.info-drawer-header')
       const closeButton = this.querySelector<HTMLButtonElement>('.info-drawer-close')
 
       this.trigger?.addEventListener('click', this.open)
@@ -60,6 +64,10 @@ const initialWidth = Math.max(320, defaultWidth)
       this.dialog?.addEventListener('close', this.afterClose)
       this.resizer?.addEventListener('pointerdown', this.startResize)
       this.resizer?.addEventListener('keydown', this.resizeWithKeyboard)
+      this.header?.addEventListener('pointerdown', this.startSwipe)
+      this.header?.addEventListener('pointermove', this.moveSwipe)
+      this.header?.addEventListener('pointerup', this.endSwipe)
+      this.header?.addEventListener('pointercancel', this.cancelSwipe)
       window.addEventListener('resize', this.keepWidthInBounds)
       this.updateResizeValue()
     }
@@ -70,6 +78,10 @@ const initialWidth = Math.max(320, defaultWidth)
       this.dialog?.removeEventListener('close', this.afterClose)
       this.resizer?.removeEventListener('pointerdown', this.startResize)
       this.resizer?.removeEventListener('keydown', this.resizeWithKeyboard)
+      this.header?.removeEventListener('pointerdown', this.startSwipe)
+      this.header?.removeEventListener('pointermove', this.moveSwipe)
+      this.header?.removeEventListener('pointerup', this.endSwipe)
+      this.header?.removeEventListener('pointercancel', this.cancelSwipe)
       window.removeEventListener('resize', this.keepWidthInBounds)
     }
 
@@ -84,6 +96,7 @@ const initialWidth = Math.max(320, defaultWidth)
 
     private afterClose = () => {
       document.body.style.overflow = this.previousBodyOverflow
+      this.resetSwipePosition(false)
       this.trigger?.focus()
     }
 
@@ -157,6 +170,54 @@ const initialWidth = Math.max(320, defaultWidth)
     }
 
     private keepWidthInBounds = () => this.setWidth(this.currentWidth())
+
+    private startSwipe = (event: PointerEvent) => {
+      if (!this.dialog || !this.header || event.pointerType !== 'touch') return
+
+      this.swipeStartX = event.clientX
+      this.swipeStartTime = performance.now()
+      this.header.setPointerCapture(event.pointerId)
+      this.dialog.classList.add('info-drawer-swiping')
+    }
+
+    private moveSwipe = (event: PointerEvent) => {
+      if (!this.dialog?.classList.contains('info-drawer-swiping')) return
+
+      const distance = Math.max(0, event.clientX - this.swipeStartX)
+      this.dialog.style.setProperty('--info-drawer-swipe', `${distance}px`)
+    }
+
+    private endSwipe = (event: PointerEvent) => {
+      if (!this.dialog?.classList.contains('info-drawer-swiping')) return
+
+      const distance = Math.max(0, event.clientX - this.swipeStartX)
+      const elapsed = Math.max(1, performance.now() - this.swipeStartTime)
+      const shouldClose = distance > this.currentWidth() * 0.25 || distance / elapsed > 0.6
+
+      if (shouldClose) {
+        this.dialog.classList.remove('info-drawer-swiping')
+        this.dialog.classList.add('info-drawer-swipe-closing')
+        this.dialog.style.setProperty('--info-drawer-swipe', '100%')
+        window.setTimeout(this.close, 160)
+        return
+      }
+
+      this.resetSwipePosition(true)
+    }
+
+    private cancelSwipe = () => this.resetSwipePosition(true)
+
+    private resetSwipePosition(animate: boolean) {
+      if (!this.dialog) return
+
+      this.dialog.classList.remove('info-drawer-swiping', 'info-drawer-swipe-closing')
+      if (animate) this.dialog.classList.add('info-drawer-swipe-resetting')
+      this.dialog.style.setProperty('--info-drawer-swipe', '0px')
+
+      if (animate) {
+        window.setTimeout(() => this.dialog?.classList.remove('info-drawer-swipe-resetting'), 180)
+      }
+    }
   }
 
   if (!customElements.get('info-drawer')) customElements.define('info-drawer', InfoDrawer)
@@ -203,7 +264,9 @@ const initialWidth = Math.max(320, defaultWidth)
   .info-drawer-dialog {
     position: fixed;
     inset: 0 0 0 auto;
+    box-sizing: border-box;
     width: min(var(--info-drawer-width), 60vw);
+    min-width: 0;
     max-width: none;
     height: 100dvh;
     max-height: none;
@@ -215,10 +278,12 @@ const initialWidth = Math.max(320, defaultWidth)
     color: hsl(var(--foreground));
     background: hsl(var(--background));
     box-shadow: -12px 0 32px hsl(var(--foreground) / 0.12);
+    transform: translateX(var(--info-drawer-swipe, 0px));
   }
 
   .info-drawer-dialog[open] {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr);
     animation: info-drawer-enter 180ms ease-out;
   }
@@ -230,12 +295,24 @@ const initialWidth = Math.max(320, defaultWidth)
 
   .info-drawer-header {
     display: flex;
+    min-width: 0;
     align-items: center;
     justify-content: space-between;
     min-height: 3.75rem;
     gap: 1rem;
     padding: 0.75rem 1rem 0.75rem 1.25rem;
     border-bottom: 1px solid hsl(var(--border));
+  }
+
+  .info-drawer-dialog.info-drawer-swiping {
+    animation: none;
+    transition: none;
+  }
+
+  .info-drawer-dialog.info-drawer-swipe-resetting,
+  .info-drawer-dialog.info-drawer-swipe-closing {
+    animation: none;
+    transition: transform 160ms ease-out;
   }
 
   .info-drawer-header h2 {
@@ -259,6 +336,7 @@ const initialWidth = Math.max(320, defaultWidth)
   }
 
   .info-drawer-content {
+    min-width: 0;
     overflow: auto;
     overscroll-behavior: contain;
     padding: 1.25rem;
@@ -319,8 +397,19 @@ const initialWidth = Math.max(320, defaultWidth)
   }
 
   @media (max-width: 639px) {
+    .info-drawer-trigger {
+      width: 2.75rem;
+      height: 2.75rem;
+      padding: 0.75rem;
+    }
+
     .info-drawer-dialog {
       width: 100vw;
+      max-width: 100vw;
+    }
+
+    .info-drawer-header {
+      touch-action: pan-y;
     }
 
     .info-drawer-resizer {
