@@ -45,6 +45,23 @@ Write the post here.
 
 Site identity, navigation, integrations, and comments are configured in `src/site.config.ts`.
 
+### Code block folding
+
+Long syntax-highlighted code blocks are folded automatically. Configure the behavior under
+`theme.content.codeCollapse` in `src/site.config.ts`:
+
+```ts
+codeCollapse: {
+  enableAutoCollapse: true,
+  lineThreshold: 5,
+  previewLines: 3.5
+}
+```
+
+With these defaults, blocks longer than five lines show three and a half lines with a faded lower
+edge and an expand button. Set `enableAutoCollapse: false` to render every code block fully expanded.
+`lineThreshold` controls when folding starts, and `previewLines` controls the collapsed height.
+
 ## Internationalization
 
 Chinese is the default locale and uses URLs without a prefix. English uses `/en`:

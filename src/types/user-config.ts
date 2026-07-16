@@ -52,7 +52,12 @@ export const UserConfigSchema = z.object({
     externalLinksContent: z.string().optional().default(' ↗'),
     blogPageSize: z.number().optional().default(8),
     externalLinkArrow: z.boolean().optional().default(true),
-    share: z.array(z.string()).optional()
+    share: z.array(z.string()).optional(),
+    codeCollapse: z.object({
+      enableAutoCollapse: z.boolean().default(true),
+      lineThreshold: z.number().int().positive().default(5),
+      previewLines: z.number().positive().default(3.5)
+    }).optional()
   }).optional(),
   
   // 集成配置

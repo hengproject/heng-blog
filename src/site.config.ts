@@ -42,7 +42,12 @@ export const theme: ThemeUserConfig = {
     externalLinksContent: ' ↗',
     blogPageSize: 15,
     externalLinkArrow: true,
-    share: []
+    share: [],
+    codeCollapse: {
+      enableAutoCollapse: true,
+      lineThreshold: 5,
+      previewLines: 3.5
+    }
   }
 }
 

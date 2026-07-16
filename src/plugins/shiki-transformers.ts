@@ -144,3 +144,51 @@ export const addCopyButton = (timeout?: number): ShikiTransformer => {
     }
   }
 }
+
+interface CodeCollapseOptions {
+  enableAutoCollapse?: boolean
+  lineThreshold?: number
+  previewLines?: number
+}
+
+export const addCodeCollapse = ({
+  enableAutoCollapse = true,
+  lineThreshold = 5,
+  previewLines = 3.5
+}: CodeCollapseOptions = {}): ShikiTransformer => {
+  return {
+    name: 'shiki-transformer-code-collapse',
+    pre(node) {
+      const lineCount = this.source.replace(/\r?\n$/u, '').split(/\r?\n/u).length
+      if (!enableAutoCollapse || lineCount <= lineThreshold) return
+
+      this.addClassToHast(node, 'code-collapsible')
+      this.addClassToHast(node, 'is-collapsed')
+      node.properties['data-line-count'] = lineCount
+      const existingStyle = typeof node.properties.style === 'string' ? node.properties.style : ''
+      const styleSeparator = existingStyle && !existingStyle.endsWith(';') ? ';' : ''
+      node.properties.style = `${existingStyle}${styleSeparator}--code-preview-lines:${previewLines}`
+
+      node.children.push(
+        h(
+          'button',
+          {
+            type: 'button',
+            class: 'code-collapse-toggle',
+            'aria-expanded': 'false',
+            onclick: `
+              const block = this.closest('.code-collapsible');
+              const willExpand = block.classList.contains('is-collapsed');
+              block.classList.toggle('is-collapsed', !willExpand);
+              this.setAttribute('aria-expanded', String(willExpand));
+            `
+          },
+          [
+            h('span', { class: 'code-expand-label' }, '展开'),
+            h('span', { class: 'code-collapse-label' }, '收起')
+          ]
+        )
+      )
+    }
+  }
+}

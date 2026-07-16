@@ -16,6 +16,7 @@ import AstroAxiIntegration from './src/axi-integration.ts'
 import rehypeAutolinkHeadings from './src/plugins/rehype-auto-link-headings.ts'
 // Shiki
 import {
+  addCodeCollapse,
   addCopyButton,
   addLanguage,
   addTitle,
@@ -104,7 +105,8 @@ export default defineConfig({
         updateStyle(),
         addTitle(),
         addLanguage(),
-        addCopyButton(2000)
+        addCopyButton(2000),
+        addCodeCollapse(config.content?.codeCollapse)
       ]
     }
   },

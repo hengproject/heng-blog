@@ -170,7 +170,16 @@ export const ThemeConfigSchema = () =>
       externalLinkArrow: z.boolean().optional().default(true),
 
       /** Share buttons to show */
-      share: ShareSchema()
+      share: ShareSchema(),
+
+      /** Automatically collapse long syntax-highlighted code blocks. */
+      codeCollapse: z
+        .object({
+          enableAutoCollapse: z.boolean().default(true),
+          lineThreshold: z.number().int().positive().default(5),
+          previewLines: z.number().positive().default(3.5)
+        })
+        .optional()
     })
   })
 

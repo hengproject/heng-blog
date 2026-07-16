@@ -149,6 +149,61 @@ span.katex-display {
     }
   }
 
+  &.code-collapsible {
+    & > pre {
+      transition: max-height 200ms ease;
+    }
+
+    &.is-collapsed {
+      & > pre {
+        max-height: calc(var(--code-preview-lines) * 1.5rem + 0.75rem);
+        overflow: hidden;
+      }
+
+      &::after {
+        position: absolute;
+        inset-inline: 0;
+        bottom: 0;
+        z-index: 3;
+        height: 2.5rem;
+        content: '';
+        pointer-events: none;
+        background: linear-gradient(to bottom, transparent, var(--tw-prose-pre-bg) 75%);
+      }
+    }
+
+    & .code-collapse-toggle {
+      position: absolute;
+      inset-inline-start: 50%;
+      bottom: 0.35rem;
+      z-index: 4;
+      translate: -50% 0;
+      border: 1px solid hsl(var(--border));
+      border-radius: 999px;
+      padding: 0.1rem 0.75rem;
+      color: hsl(var(--muted-foreground));
+      background-color: hsl(var(--background));
+      font-family: inherit;
+      font-size: 0.75rem;
+      line-height: 1.25rem;
+      cursor: pointer;
+
+      &:hover {
+        color: hsl(var(--foreground));
+        background-color: hsl(var(--muted));
+      }
+    }
+
+    & .code-expand-label,
+    &.is-collapsed .code-collapse-label {
+      display: none;
+    }
+
+    &.is-collapsed .code-expand-label {
+      display: inline;
+    }
+  }
+
   & .highlighted,
   & .diff {
     min-width: 100%;
