@@ -1,0 +1,336 @@
+---
+import Icon from '@/components/user/Icon.astro'
+
+interface Props {
+  title?: string
+  label?: string
+  defaultWidth?: number
+}
+
+const { title = '补充说明', label = `打开“${title}”`, defaultWidth = 448 } = Astro.props
+const initialWidth = Math.max(320, defaultWidth)
+---
+
+<info-drawer style={`--info-drawer-width: ${initialWidth}px`}>
+  <button class='info-drawer-trigger not-prose' type='button' aria-label={label} title={label}>
+    <Icon name='info' />
+  </button>
+
+  <dialog class='info-drawer-dialog' aria-label={title}>
+    <div
+      class='info-drawer-resizer'
+      role='separator'
+      aria-label='调整说明栏宽度'
+      aria-orientation='vertical'
+      aria-valuemin='320'
+      aria-valuenow={initialWidth}
+      tabindex='0'
+    >
+    </div>
+
+    <header class='info-drawer-header not-prose'>
+      <h2>{title}</h2>
+      <button class='info-drawer-close' type='button' aria-label='关闭说明栏' title='关闭'>
+        <span aria-hidden='true'>&times;</span>
+      </button>
+    </header>
+
+    <div class='info-drawer-content'>
+      <slot />
+    </div>
+  </dialog>
+</info-drawer>
+
+<script>
+  class InfoDrawer extends HTMLElement {
+    private dialog: HTMLDialogElement | null = null
+    private trigger: HTMLButtonElement | null = null
+    private resizer: HTMLElement | null = null
+    private previousBodyOverflow = ''
+
+    connectedCallback() {
+      this.dialog = this.querySelector('.info-drawer-dialog')
+      this.trigger = this.querySelector('.info-drawer-trigger')
+      this.resizer = this.querySelector('.info-drawer-resizer')
+      const closeButton = this.querySelector<HTMLButtonElement>('.info-drawer-close')
+
+      this.trigger?.addEventListener('click', this.open)
+      closeButton?.addEventListener('click', this.close)
+      this.dialog?.addEventListener('click', this.closeFromBackdrop)
+      this.dialog?.addEventListener('close', this.afterClose)
+      this.resizer?.addEventListener('pointerdown', this.startResize)
+      this.resizer?.addEventListener('keydown', this.resizeWithKeyboard)
+      window.addEventListener('resize', this.keepWidthInBounds)
+      this.updateResizeValue()
+    }
+
+    disconnectedCallback() {
+      this.trigger?.removeEventListener('click', this.open)
+      this.dialog?.removeEventListener('click', this.closeFromBackdrop)
+      this.dialog?.removeEventListener('close', this.afterClose)
+      this.resizer?.removeEventListener('pointerdown', this.startResize)
+      this.resizer?.removeEventListener('keydown', this.resizeWithKeyboard)
+      window.removeEventListener('resize', this.keepWidthInBounds)
+    }
+
+    private open = () => {
+      if (!this.dialog || this.dialog.open) return
+      this.previousBodyOverflow = document.body.style.overflow
+      document.body.style.overflow = 'hidden'
+      this.dialog.showModal()
+    }
+
+    private close = () => this.dialog?.close()
+
+    private afterClose = () => {
+      document.body.style.overflow = this.previousBodyOverflow
+      this.trigger?.focus()
+    }
+
+    private closeFromBackdrop = (event: MouseEvent) => {
+      if (!this.dialog) return
+      const bounds = this.dialog.getBoundingClientRect()
+      if (event.clientX < bounds.left || event.clientX > bounds.right) this.close()
+    }
+
+    private getWidthBounds() {
+      return { min: 320, max: Math.max(320, Math.floor(window.innerWidth * 0.6)) }
+    }
+
+    private setWidth(width: number) {
+      const { min, max } = this.getWidthBounds()
+      const boundedWidth = Math.min(max, Math.max(min, width))
+      this.style.setProperty('--info-drawer-width', `${boundedWidth}px`)
+      this.updateResizeValue(boundedWidth)
+    }
+
+    private currentWidth() {
+      const renderedWidth = this.dialog?.getBoundingClientRect().width ?? 0
+      if (renderedWidth > 0) return renderedWidth
+
+      return (
+        Number.parseFloat(getComputedStyle(this).getPropertyValue('--info-drawer-width')) || 448
+      )
+    }
+
+    private updateResizeValue(width = this.currentWidth()) {
+      const { min, max } = this.getWidthBounds()
+      const boundedWidth = Math.min(max, Math.max(min, width))
+      this.resizer?.setAttribute('aria-valuemax', String(max))
+      this.resizer?.setAttribute('aria-valuenow', String(Math.round(boundedWidth)))
+    }
+
+    private startResize = (event: PointerEvent) => {
+      if (!this.resizer || window.matchMedia('(max-width: 639px)').matches) return
+      event.preventDefault()
+      this.resizer.setPointerCapture(event.pointerId)
+      document.body.classList.add('info-drawer-resizing')
+
+      const resize = (moveEvent: PointerEvent) =>
+        this.setWidth(window.innerWidth - moveEvent.clientX)
+      const stop = () => {
+        this.resizer?.removeEventListener('pointermove', resize)
+        this.resizer?.removeEventListener('pointerup', stop)
+        this.resizer?.removeEventListener('pointercancel', stop)
+        document.body.classList.remove('info-drawer-resizing')
+      }
+
+      this.resizer.addEventListener('pointermove', resize)
+      this.resizer.addEventListener('pointerup', stop)
+      this.resizer.addEventListener('pointercancel', stop)
+    }
+
+    private resizeWithKeyboard = (event: KeyboardEvent) => {
+      const { min, max } = this.getWidthBounds()
+      const step = event.shiftKey ? 64 : 16
+      let nextWidth: number | undefined
+
+      if (event.key === 'ArrowLeft') nextWidth = this.currentWidth() + step
+      if (event.key === 'ArrowRight') nextWidth = this.currentWidth() - step
+      if (event.key === 'Home') nextWidth = min
+      if (event.key === 'End') nextWidth = max
+
+      if (nextWidth !== undefined) {
+        event.preventDefault()
+        this.setWidth(nextWidth)
+      }
+    }
+
+    private keepWidthInBounds = () => this.setWidth(this.currentWidth())
+  }
+
+  if (!customElements.get('info-drawer')) customElements.define('info-drawer', InfoDrawer)
+</script>
+
+<style is:global>
+  info-drawer {
+    display: inline-flex;
+    vertical-align: middle;
+  }
+
+  .info-drawer-trigger,
+  .info-drawer-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid hsl(var(--border));
+    color: hsl(var(--muted-foreground));
+    background: hsl(var(--background));
+    transition:
+      color 150ms ease,
+      border-color 150ms ease,
+      background-color 150ms ease;
+  }
+
+  .info-drawer-trigger {
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0.25rem;
+    border-radius: 9999px;
+    cursor: pointer;
+  }
+
+  .info-drawer-trigger:hover,
+  .info-drawer-trigger:focus-visible,
+  .info-drawer-close:hover,
+  .info-drawer-close:focus-visible {
+    color: hsl(var(--foreground));
+    border-color: hsl(var(--primary));
+    background: hsl(var(--muted));
+    outline: none;
+  }
+
+  .info-drawer-dialog {
+    position: fixed;
+    inset: 0 0 0 auto;
+    width: min(var(--info-drawer-width), 60vw);
+    max-width: none;
+    height: 100dvh;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+    border: 0;
+    border-left: 1px solid hsl(var(--border));
+    color: hsl(var(--foreground));
+    background: hsl(var(--background));
+    box-shadow: -12px 0 32px hsl(var(--foreground) / 0.12);
+  }
+
+  .info-drawer-dialog[open] {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    animation: info-drawer-enter 180ms ease-out;
+  }
+
+  .info-drawer-dialog::backdrop {
+    background: hsl(var(--foreground) / 0.22);
+    backdrop-filter: blur(2px);
+  }
+
+  .info-drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 3.75rem;
+    gap: 1rem;
+    padding: 0.75rem 1rem 0.75rem 1.25rem;
+    border-bottom: 1px solid hsl(var(--border));
+  }
+
+  .info-drawer-header h2 {
+    margin: 0;
+    overflow-wrap: anywhere;
+    font-size: 1rem;
+    line-height: 1.5rem;
+    font-weight: 600;
+    letter-spacing: 0;
+  }
+
+  .info-drawer-close {
+    flex: 0 0 auto;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    font-size: 1.5rem;
+    line-height: 1;
+  }
+
+  .info-drawer-content {
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding: 1.25rem;
+  }
+
+  .info-drawer-content > :first-child {
+    margin-top: 0;
+  }
+
+  .info-drawer-content > :last-child {
+    margin-bottom: 0;
+  }
+
+  .info-drawer-resizer {
+    position: absolute;
+    z-index: 1;
+    top: 0;
+    bottom: 0;
+    left: -0.375rem;
+    width: 0.75rem;
+    cursor: col-resize;
+    touch-action: none;
+  }
+
+  .info-drawer-resizer::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc(50% - 1px);
+    width: 2px;
+    background: transparent;
+    transition: background-color 150ms ease;
+  }
+
+  .info-drawer-resizer:hover::after,
+  .info-drawer-resizer:focus-visible::after {
+    background: hsl(var(--primary));
+  }
+
+  .info-drawer-resizer:focus-visible {
+    outline: none;
+  }
+
+  body.info-drawer-resizing,
+  body.info-drawer-resizing * {
+    cursor: col-resize !important;
+    user-select: none !important;
+  }
+
+  @keyframes info-drawer-enter {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  @media (max-width: 639px) {
+    .info-drawer-dialog {
+      width: 100vw;
+    }
+
+    .info-drawer-resizer {
+      display: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .info-drawer-dialog[open] {
+      animation: none;
+    }
+  }
+</style>
