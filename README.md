@@ -203,25 +203,24 @@ separate from the posts themselves:
 src/content/collections/<collection-id>.yaml
 ```
 
-For example:
+For example, the current machine-learning basics manifest is:
 
 ```yaml
 title:
-  zh: 机器学习基础回顾
-  en: Machine Learning Recall
+  zh: 机器学习基础
+  en: Machine Learning Basics
 description:
-  zh: 从训练基础到 Transformer 的系列笔记。
-  en: Notes from training fundamentals to Transformers.
+  zh: 神经网络训练中的初始化、归一化与其他基础概念。
+  en: Initialization, normalization, and other foundations of neural network training.
 posts:
   - ml-weight-initialization
   - batch-norm-vs-layer-norm
-  - transformer-encoder
 ```
 
 Store a collection's article directories under
 `src/content/blog/collections/<collection-id>/<post-slug>/`. Physical placement does not add an
 article to a collection: each slug must also appear in the manifest's `posts` array. The array order
-is the reading order and drives the collection page, the `01 / 03` progress label, and the previous,
+is the reading order and drives the collection page, the `01 / NN` progress label, and the previous,
 next, and article-picker links shown between the article header and body. Do not add collection
 metadata to individual article frontmatter.
 
@@ -230,6 +229,45 @@ collection directory, repeats a post, or assigns the same post to more than one 
 collection is shown in a locale only when at least one listed post has that locale's content file.
 Add `index-en.md(x)` alongside the Chinese article to make that entry available in the English
 series.
+
+### Current collection arrangement
+
+All current collection articles live under a directory matching their manifest ID:
+
+```text
+src/content/
+├── collections/
+│   ├── ml-basics.yaml
+│   └── transformer.yaml
+└── blog/collections/
+    ├── ml-basics/
+    │   ├── ml-weight-initialization/
+    │   └── batch-norm-vs-layer-norm/
+    └── transformer/
+        ├── from-additive-to-multi-head-attention/
+        ├── transformer-input-embedding/
+        ├── transformer-encoder/
+        └── transformer-decoder/
+```
+
+`ml-basics.yaml` currently defines this reading order:
+
+| Order | Slug                       | Article                                    | Status |
+| ----- | -------------------------- | ------------------------------------------ | ------ |
+| 01    | `ml-weight-initialization` | 深度学习中的权重初始化                     | Draft  |
+| 02    | `batch-norm-vs-layer-norm` | Batch Normalization 与 Layer Normalization | Draft  |
+
+`transformer.yaml` currently defines this reading order:
+
+| Order | Slug                                    | Article                                       | Status |
+| ----- | --------------------------------------- | --------------------------------------------- | ------ |
+| 01    | `from-additive-to-multi-head-attention` | 从 Additive Attention 到 Multi-Head Attention | Draft  |
+| 02    | `transformer-input-embedding`           | Transformer 的输入嵌入与位置编码              | Draft  |
+| 03    | `transformer-encoder`                   | 从零实现 Transformer Encoder                  | Draft  |
+| 04    | `transformer-decoder`                   | 从零实现 Transformer Decoder                  | Draft  |
+
+The manifest remains the source of truth. Update these tables when adding, removing, reordering, or
+publishing an article so this overview stays in sync with the YAML and article frontmatter.
 
 ## Commands
 
