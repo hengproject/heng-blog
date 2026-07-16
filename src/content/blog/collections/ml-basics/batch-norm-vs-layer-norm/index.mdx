@@ -1,33 +1,18 @@
 ---
 title: Batch Normalization 与 Layer Normalization
-description: '[for ai to generate]'
+description: 从统计维度、训练推理行为和应用场景理解 BatchNorm 与 LayerNorm 的区别。
 publishDate: 2025-04-17
-updatedDate: 2026-07-14
+updatedDate: 2026-07-16
 category: research
 tags:
   - deep-learning
   - normalization
   - neural-network
-draft: true
-translationStatus: draft
+draft: false
+translationStatus: complete
 ---
 
-import InfoDrawer from '@/components/custom/InfoDrawer.astro'
-
 Batch Normalization（BN）和 Layer Normalization（LN）都通过标准化激活值来改善神经网络的优化过程，但二者计算统计量的维度不同，因此适用场景也不同。
-
-<InfoDrawer title='BN 与 LN 的直观区别'>
-  BN 使用同一特征在 **mini-batch 内**的统计量；LN 使用单个样本在 **特征维度上**的统计量。
-
-因此，LN 不依赖 batch 大小，并且训练与推理阶段的归一化方式一致。
-
-```python
-# x: (batch, features)
-batch_mean = x.mean(dim=0, keepdim=True)
-layer_mean = x.mean(dim=1, keepdim=True)
-```
-
-</InfoDrawer>
 
 > 本文整理自 [`hengproject/ML_recall`](https://github.com/hengproject/ML_recall) 中的 [`basics/Normalizations.ipynb`](https://github.com/hengproject/ML_recall/blob/main/basics/Normalizations.ipynb)。延伸讲解可参考 [Deep Learning Basics: Batch Normalization](https://www.youtube.com/watch?v=BZh1ltr5Rkg)。
 
@@ -70,7 +55,9 @@ print(y.shape, np.mean(y), np.var(y))
 
 ### 训练与推理
 
-训练时，BN 使用当前 mini-batch 的统计量，并维护均值和方差的移动估计。推理时通常使用训练期间累计的移动统计量，而不是依赖当前输入 batch。
+训练时，BN 使用当前 mini-batch 的统计量，并维护均值和方差的移动估计。
+
+推理时通常使用训练期间累计的移动统计量，而不是依赖当前输入 batch。
 
 BN 往往能够：
 

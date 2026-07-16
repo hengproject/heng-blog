@@ -2,15 +2,17 @@
 title: 深度学习中的权重初始化
 description: 从零初始化和小随机数出发，通过激活分布理解 Xavier 与 Kaiming 初始化。
 publishDate: 2025-04-17
-updatedDate: 2026-07-14
+updatedDate: 2026-07-16
 category: research
 tags:
   - deep-learning
   - initialization
   - neural-network
-draft: true
-translationStatus: draft
+draft: false
+translationStatus: complete
 ---
+
+import InfoDrawer from '@/components/custom/InfoDrawer.astro'
 
 神经网络的权重初始化会直接影响前向传播中的激活分布，以及反向传播时梯度能否稳定流动。本文从一个线性层出发，逐步比较零初始化、小随机数、Xavier 初始化和 Kaiming 初始化。
 
@@ -132,7 +134,58 @@ for fan_in, fan_out in zip(dims[:-1], dims[1:]):
 
 ![Xavier 初始化下各层的 ReLU 激活分布](./images/xavier-relu.png)
 
-ReLU 会把负值截断为零。在输入关于零对称的近似条件下，可将其视为使二阶矩大约减半。为保持尺度，需要令：
+ReLU 会把负值截断为零。在输入关于零对称的近似条件下，可将其视为使 $E[z^2]$ 大约减半。为保持尺度，需要令：
+
+<InfoDrawer title='ReLU 对 E[z²] 的影响' defaultWidth={560}>
+  当 $z$ 关于零对称时，正负两侧对 $E[z^2]$ 的贡献相同。ReLU 将负数一侧截断为零，因此保留下来的 $E[z^2]$ 约为原来的一半：
+
+$$
+E[\operatorname{ReLU}(z)^2] \approx \frac{1}{2}E[z^2].
+$$
+
+取一组关于零对称的数值：
+
+$$
+\begin{aligned}
+z &= [-2,-1,1,2], \\
+z^2 &= [4,1,1,4], \\
+E[z^2] &= \frac{10}{4}=2.5.
+\end{aligned}
+$$
+
+经过 ReLU 后，负数被置为零：
+
+$$
+\begin{aligned}
+\operatorname{ReLU}(z) &= [0,0,1,2], \\
+\operatorname{ReLU}(z)^2 &= [0,0,1,4], \\
+E[\operatorname{ReLU}(z)^2] &= \frac{5}{4}=1.25
+= \frac{1}{2}\times 2.5.
+\end{aligned}
+$$
+
+对于具有 $n_{in}$ 个输入的线性层，其输出满足：
+
+$$
+E[z^2] \approx n_{in}\operatorname{Var}(w)E[x^2].
+$$
+
+经过 ReLU 后：
+
+$$
+E[\operatorname{ReLU}(z)^2]
+\approx \frac{1}{2}n_{in}\operatorname{Var}(w)E[x^2].
+$$
+
+为了让每一层前后的信号尺度基本不变，需要满足：
+
+$$
+\frac{1}{2}n_{in}\operatorname{Var}(w) \approx 1,
+$$
+
+由此得到 He 初始化采用的关系 $\operatorname{Var}(w) \approx 2/n_{in}$。
+
+</InfoDrawer>
 
 $$
 \begin{aligned}
