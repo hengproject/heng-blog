@@ -27,14 +27,14 @@ const { meta, highlightColor, ...props } = Astro.props
 
     <article class='min-w-0 grow'>
       {/* Content header */}
-      <div id='content-header' class='animate'>
+      <div id='content-header' class='animate relative z-10'>
         <slot name='header' />
       </div>
 
       {/* Content */}
       <div
         id='content'
-        class={cn('max-w-none animate mt-8 md:min-w-[45ch]', integ.typography.class)}
+        class={cn('max-w-none animate relative z-0 mt-8 md:min-w-[45ch]', integ.typography.class)}
       >
         <slot />
       </div>
