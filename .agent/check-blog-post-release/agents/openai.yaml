@@ -1,0 +1,4 @@
+interface:
+  display_name: "Check Blog Post Release"
+  short_description: "Review a blog post before publication"
+  default_prompt: "Review the selected Heng Blog post for publication, including content, metadata, links, collection placement, and its built route."
