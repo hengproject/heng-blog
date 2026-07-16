@@ -1,0 +1,10 @@
+title:
+  zh: 机器学习基础
+  en: Machine Learning Basics
+description:
+  zh: 神经网络训练中的初始化、归一化与其他基础概念。
+  en: Initialization, normalization, and other foundations of neural network training.
+# Directory placement alone does not add a post. This list controls membership and reading order.
+posts:
+  - ml-weight-initialization
+  - batch-norm-vs-layer-norm

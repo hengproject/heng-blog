@@ -31,11 +31,11 @@ This creates `src/content/blog/my-first-post/index.md`. Add `--lang en` to creat
 To store a post with the rest of a collection, pass its collection key:
 
 ```bash
-pnpm new:post -- --slug next-note --mdx --collection ml-recall "Next note"
+pnpm new:post -- --slug next-note --mdx --collection transformer "Next note"
 ```
 
-This creates `src/content/blog/collections/ml-recall/next-note/index.mdx`, but deliberately does not
-add it to the collection. Add its slug to `src/content/collections/ml-recall.yaml` when it is ready
+This creates `src/content/blog/collections/transformer/next-note/index.mdx`, but deliberately does not
+add it to the collection. Add its slug to `src/content/collections/transformer.yaml` when it is ready
 to join the series. The order of the `posts` array is the reading order.
 
 You can also create the files manually. Create a post at `src/content/blog/<slug>/index.md`:

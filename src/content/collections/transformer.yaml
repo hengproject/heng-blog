@@ -1,0 +1,12 @@
+title:
+  zh: Transformer 原理与实现
+  en: Transformer Concepts and Implementation
+description:
+  zh: 从注意力机制与输入表示到 Encoder、Decoder 的完整实现。
+  en: From attention and input representations to complete encoder and decoder implementations.
+# Directory placement alone does not add a post. This list controls membership and reading order.
+posts:
+  - from-additive-to-multi-head-attention
+  - transformer-input-embedding
+  - transformer-encoder
+  - transformer-decoder

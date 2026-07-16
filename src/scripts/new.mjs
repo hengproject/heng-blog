@@ -27,7 +27,7 @@ Options:
 Examples:
   pnpm new:post -- --slug first-post "My first post"
   pnpm new:post -- --slug first-post --lang en "My first post"
-  pnpm new:post -- --slug next-note --mdx --collection ml-recall "Next note"
+  pnpm new:post -- --slug next-note --mdx --collection transformer "Next note"
 `
 
 function getDate() {
