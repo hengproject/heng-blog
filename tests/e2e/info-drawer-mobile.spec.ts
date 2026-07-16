@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test'
 
-const articlePath = '/blog/batch-norm-vs-layer-norm'
+const articlePath = '/blog/ml-weight-initialization'
+const drawerName = 'ReLU 对 E[z²] 的影响'
+const triggerName = /ReLU 对 E/
 
 test.use({
   viewport: { width: 390, height: 844 },
@@ -9,11 +11,14 @@ test.use({
 })
 
 test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('axi-blog-graphics-warning-shown', 'true')
+  })
   await page.goto(articlePath)
 })
 
 test('opens as an opaque, scrollable mobile drawer', async ({ page }) => {
-  const trigger = page.getByRole('button', { name: /BN 与 LN 的直观区别/ })
+  const trigger = page.getByRole('button', { name: triggerName })
   const triggerBounds = await trigger.boundingBox()
 
   expect(triggerBounds?.width).toBeGreaterThanOrEqual(44)
@@ -21,7 +26,7 @@ test('opens as an opaque, scrollable mobile drawer', async ({ page }) => {
 
   await trigger.tap()
 
-  const drawer = page.getByRole('dialog', { name: 'BN 与 LN 的直观区别' })
+  const drawer = page.getByRole('dialog', { name: drawerName })
   await expect(drawer).toBeVisible()
   await expect(drawer).toHaveCSS('width', '390px')
   const backgrounds = await page.evaluate(() => ({
@@ -32,14 +37,14 @@ test('opens as an opaque, scrollable mobile drawer', async ({ page }) => {
   expect(backgrounds.drawer).not.toMatch(/rgba\([^)]*,\s*0\)/)
   await expect(drawer.locator('.info-drawer-resizer')).toBeHidden()
 
-  const code = drawer.locator('.astro-code')
-  const scrollState = await code.evaluate((element) => ({
+  const content = drawer.locator('.info-drawer-content')
+  const scrollState = await content.evaluate((element) => ({
     clientWidth: element.clientWidth,
-    overflowX: getComputedStyle(element).overflowX,
+    overflowY: getComputedStyle(element).overflowY,
     scrollWidth: element.scrollWidth
   }))
   expect(scrollState.scrollWidth).toBeGreaterThanOrEqual(scrollState.clientWidth)
-  expect(scrollState.overflowX).toBe('auto')
+  expect(scrollState.overflowY).toBe('auto')
 
   await page.keyboard.press('Escape')
   await expect(drawer).toBeHidden()
@@ -55,9 +60,9 @@ test.describe('narrow responsive viewport', () => {
 
   test('keeps controls and content inside the viewport', async ({ page }) => {
     expect(await page.evaluate(() => window.innerWidth)).toBe(320)
-    await page.getByRole('button', { name: /BN 与 LN 的直观区别/ }).click()
+    await page.getByRole('button', { name: triggerName }).click()
 
-    const drawer = page.getByRole('dialog', { name: 'BN 与 LN 的直观区别' })
+    const drawer = page.getByRole('dialog', { name: drawerName })
     await drawer.evaluate(async (element) => {
       await Promise.all(element.getAnimations().map((animation) => animation.finished))
     })
@@ -82,9 +87,9 @@ test.describe('narrow responsive viewport', () => {
 })
 
 test('closes when the header is swiped to the right', async ({ page }) => {
-  await page.getByRole('button', { name: /BN 与 LN 的直观区别/ }).tap()
+  await page.getByRole('button', { name: triggerName }).tap()
 
-  const drawer = page.getByRole('dialog', { name: 'BN 与 LN 的直观区别' })
+  const drawer = page.getByRole('dialog', { name: drawerName })
   await drawer.evaluate(async (element) => {
     await Promise.all(element.getAnimations().map((animation) => animation.finished))
   })
@@ -115,6 +120,6 @@ test('closes when the header is swiped to the right', async ({ page }) => {
 
   await expect(drawer).toBeHidden()
   await expect(page).toHaveURL(new RegExp(`${articlePath}$`))
-  await expect(page.getByRole('button', { name: /BN 与 LN 的直观区别/ })).toBeFocused()
+  await expect(page.getByRole('button', { name: triggerName })).toBeFocused()
   await expect(page.locator('body')).not.toHaveCSS('overflow', 'hidden')
 })

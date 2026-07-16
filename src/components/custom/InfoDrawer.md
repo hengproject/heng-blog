@@ -184,13 +184,13 @@ import { Aside, Collapse } from '@/components/user'
 仓库中的实际示例位于：
 
 ```text
-src/content/blog/collections/ml-basics/batch-norm-vs-layer-norm/index.mdx
+src/content/blog/collections/ml-basics/ml-weight-initialization/index.mdx
 ```
 
-该文章目前使用 `draft: true`，因此开发服务器可以预览，但生产构建不会发布它：
+该文章已使用 `draft: false`，开发服务器和生产构建都会生成对应页面：
 
 ```text
-http://localhost:4321/blog/batch-norm-vs-layer-norm
+http://localhost:4321/blog/ml-weight-initialization
 ```
 
 ## 测试
