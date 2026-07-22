@@ -5,6 +5,20 @@ import { PaperCitation } from '@/components/custom'
 
 <CommonPage title='论文引用组件'>
   <div class='not-prose flex flex-col gap-10'>
+    <section aria-labelledby='inline-paper'>
+      <h2 id='inline-paper' class='mb-4 text-lg font-semibold text-foreground'>Inline 引用</h2>
+      <PaperCitation
+        variant='inline'
+        title='Deep Residual Learning for Image Recognition'
+        authors={['Kaiming He', 'Xiangyu Zhang', 'Shaoqing Ren', 'Jian Sun']}
+        venue='CVPR'
+        year={2016}
+        doi='10.1109/CVPR.2016.90'
+        arxiv='1512.03385'
+        url='https://openaccess.thecvf.com/content_cvpr_2016/html/He_Deep_Residual_Learning_CVPR_2016_paper.html'
+      />
+    </section>
+
     <section aria-labelledby='arxiv-paper'>
       <h2 id='arxiv-paper' class='mb-4 text-lg font-semibold text-foreground'>arXiv 与代码</h2>
       <PaperCitation
