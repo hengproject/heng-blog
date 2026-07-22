@@ -1,0 +1,57 @@
+---
+import CommonPage from '@/layouts/CommonPage.astro'
+import { PaperCitation } from '@/components/custom'
+---
+
+<CommonPage title='论文引用组件'>
+  <div class='not-prose flex flex-col gap-10'>
+    <section aria-labelledby='arxiv-paper'>
+      <h2 id='arxiv-paper' class='mb-4 text-lg font-semibold text-foreground'>arXiv 与代码</h2>
+      <PaperCitation
+        title='Attention Is All You Need'
+        authors={[
+          'Ashish Vaswani',
+          'Noam Shazeer',
+          'Niki Parmar',
+          'Jakob Uszkoreit',
+          'Llion Jones',
+          'Aidan N. Gomez',
+          'Łukasz Kaiser',
+          'Illia Polosukhin'
+        ]}
+        venue='NeurIPS'
+        year={2017}
+        arxiv='1706.03762'
+        pdf='https://arxiv.org/pdf/1706.03762'
+        code='https://github.com/tensorflow/tensor2tensor'
+      />
+    </section>
+
+    <section aria-labelledby='doi-paper'>
+      <h2 id='doi-paper' class='mb-4 text-lg font-semibold text-foreground'>DOI 引用</h2>
+      <PaperCitation
+        title='Deep Residual Learning for Image Recognition'
+        authors={['Kaiming He', 'Xiangyu Zhang', 'Shaoqing Ren', 'Jian Sun']}
+        venue='CVPR'
+        year={2016}
+        doi='10.1109/CVPR.2016.90'
+        pdf='https://www.cv-foundation.org/openaccess/content_cvpr_2016/papers/He_Deep_Residual_Learning_CVPR_2016_paper.pdf'
+      />
+    </section>
+
+    <section aria-labelledby='paper-note'>
+      <h2 id='paper-note' class='mb-4 text-lg font-semibold text-foreground'>带阅读备注</h2>
+      <PaperCitation
+        title='LoRA: Low-Rank Adaptation of Large Language Models'
+        authors={['Edward J. Hu', 'Yelong Shen', 'Phillip Wallis', 'Zeyuan Allen-Zhu']}
+        venue='ICLR'
+        year={2022}
+        arxiv='2106.09685'
+        code='https://github.com/microsoft/LoRA'
+        links={[{ label: 'OpenReview', href: 'https://openreview.net/forum?id=nZeVKeeFYf9' }]}
+      >
+        <p class='m-0'>LoRA 冻结预训练模型权重，通过低秩分解学习任务增量，大幅减少可训练参数。</p>
+      </PaperCitation>
+    </section>
+  </div>
+</CommonPage>
