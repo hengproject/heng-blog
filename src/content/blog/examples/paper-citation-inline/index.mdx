@@ -1,0 +1,60 @@
+---
+title: Inline 论文引用示例
+description: 在文章正文中使用紧凑的 PaperCitation，展示并复制 DOI、arXiv ID、论文链接和完整引用。
+publishDate: 2026-07-22
+category: technical
+tags:
+  - astro
+  - mdx
+  - component
+draft: true
+translationStatus: draft
+---
+
+import { PaperCitation } from '@/components/custom'
+
+在技术文章中，论文引用通常只需要提供作者、年份、标题和原始链接。使用 `inline` 模式可以将这些信息放在正文附近，而不会像完整论文卡片一样占用较大空间。
+
+## 正文中的引用
+
+ResNet 将网络层学习的目标改写为残差映射，通过跨层连接缓解深层网络的优化问题。
+
+<PaperCitation
+  variant='inline'
+  title='Deep Residual Learning for Image Recognition'
+  authors={['Kaiming He', 'Xiangyu Zhang', 'Shaoqing Ren', 'Jian Sun']}
+  shortAuthors='He et al.'
+  venue='CVPR'
+  year={2016}
+  doi='10.1109/CVPR.2016.90'
+  arxiv='1512.03385'
+  url='https://openaccess.thecvf.com/content_cvpr_2016/html/He_Deep_Residual_Learning_CVPR_2016_paper.html'
+/>
+
+DOI、arXiv 和 Link 名称会打开对应页面；每个名称右侧的复制按钮会复制对应标识，末尾的文档按钮会复制完整引用。
+
+## MDX 写法
+
+先在 frontmatter 后导入组件：
+
+```mdx
+import { PaperCitation } from '@/components/custom'
+```
+
+再在正文需要引用论文的位置写：
+
+```mdx
+<PaperCitation
+  variant='inline'
+  title='Deep Residual Learning for Image Recognition'
+  authors={['Kaiming He', 'Xiangyu Zhang', 'Shaoqing Ren', 'Jian Sun']}
+  shortAuthors='He et al.'
+  venue='CVPR'
+  year={2016}
+  doi='10.1109/CVPR.2016.90'
+  arxiv='1512.03385'
+  url='https://openaccess.thecvf.com/content_cvpr_2016/html/He_Deep_Residual_Learning_CVPR_2016_paper.html'
+/>
+```
+
+`shortAuthors` 只控制 inline 模式中显示的作者缩写。`authors` 仍保留完整作者列表，用于生成可复制的完整引用。
