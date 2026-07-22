@@ -1,0 +1,184 @@
+---
+import { Icon } from '@/components/user'
+
+interface PaperLink {
+  label: string
+  href: string
+}
+
+interface Props {
+  title: string
+  authors: string | string[]
+  year?: string | number
+  venue?: string
+  url?: string
+  doi?: string
+  arxiv?: string
+  pdf?: string
+  code?: string
+  citation?: string
+  links?: PaperLink[]
+  copyLabel?: string
+  copiedLabel?: string
+}
+
+const {
+  title,
+  authors,
+  year,
+  venue,
+  url,
+  doi,
+  arxiv,
+  pdf,
+  code,
+  citation,
+  links = [],
+  copyLabel = '复制引用',
+  copiedLabel = '已复制'
+} = Astro.props
+
+const authorList = Array.isArray(authors) ? authors : [authors]
+const authorText = authorList.join(', ')
+const normalizedDoi = doi?.replace(/^https?:\/\/(?:dx\.)?doi\.org\//, '')
+const normalizedArxiv = arxiv
+  ?.replace(/^https?:\/\/arxiv\.org\/(?:abs|pdf)\//, '')
+  .replace(/\.pdf$/, '')
+
+const generatedCitation = [
+  `${authorText}.`,
+  `"${title}."`,
+  venue ? `${venue}${year ? ',' : '.'}` : undefined,
+  year ? `${year}.` : undefined,
+  normalizedDoi
+    ? `https://doi.org/${normalizedDoi}`
+    : normalizedArxiv
+      ? `arXiv:${normalizedArxiv}`
+      : url
+]
+  .filter(Boolean)
+  .join(' ')
+
+const citationText = citation?.trim() || generatedCitation
+const paperUrl = url || (normalizedDoi ? `https://doi.org/${normalizedDoi}` : undefined)
+const resourceLinks: PaperLink[] = [
+  ...(normalizedDoi ? [{ label: 'DOI', href: `https://doi.org/${normalizedDoi}` }] : []),
+  ...(normalizedArxiv
+    ? [{ label: 'arXiv', href: `https://arxiv.org/abs/${normalizedArxiv}` }]
+    : []),
+  ...(pdf ? [{ label: 'PDF', href: pdf }] : []),
+  ...(code ? [{ label: 'Code', href: code }] : []),
+  ...links
+]
+---
+
+<paper-citation data-citation={citationText}>
+  <figure class='not-prose my-6 rounded-lg border border-border bg-card p-4 sm:p-5'>
+    <div class='flex gap-3'>
+      <div
+        class='mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-md bg-primary-foreground text-primary'
+      >
+        <Icon class='size-5' name='quote' />
+      </div>
+
+      <div class='min-w-0 flex-1'>
+        <cite
+          class='block text-base font-semibold not-italic leading-snug text-foreground sm:text-lg'
+        >
+          {
+            paperUrl ? (
+              <a
+                class='transition-colors hover:text-primary hover:underline'
+                href={paperUrl}
+                target='_blank'
+                rel='noopener noreferrer'
+              >
+                {title}
+              </a>
+            ) : (
+              title
+            )
+          }
+        </cite>
+
+        <p class='mt-2 text-sm leading-relaxed text-muted-foreground'>{authorText}</p>
+
+        {
+          (venue || year) && (
+            <p class='mt-1 text-sm text-muted-foreground'>
+              {venue && <span class='font-medium text-foreground/80'>{venue}</span>}
+              {venue && year && <span aria-hidden='true'> · </span>}
+              {year}
+            </p>
+          )
+        }
+
+        <div class='mt-4 flex flex-wrap items-center gap-2'>
+          {
+            resourceLinks.map((link) => (
+              <a
+                class='inline-flex min-h-9 items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-foreground/25 hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+                href={link.href}
+                target='_blank'
+                rel='noopener noreferrer'
+              >
+                <Icon
+                  class='size-3.5'
+                  name={link.label.toLowerCase() === 'code' ? 'github' : 'link'}
+                />
+                {link.label}
+              </a>
+            ))
+          }
+
+          <button
+            class='copy-citation inline-flex min-h-9 items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-foreground/25 hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+            type='button'
+            data-copy-label={copyLabel}
+            data-copied-label={copiedLabel}
+          >
+            <Icon class='size-3.5' name='document' />
+            <span>{copyLabel}</span>
+          </button>
+        </div>
+
+        {
+          Astro.slots.has('default') && (
+            <div class='mt-4 border-t border-border pt-4 text-sm leading-relaxed text-muted-foreground'>
+              <slot />
+            </div>
+          )
+        }
+      </div>
+    </div>
+
+    <figcaption class='sr-only'>{citationText}</figcaption>
+  </figure>
+</paper-citation>
+
+<script>
+  class PaperCitation extends HTMLElement {
+    connectedCallback() {
+      const button = this.querySelector<HTMLButtonElement>('.copy-citation')
+      const label = button?.querySelector('span')
+      const citation = this.dataset.citation
+      if (!button || !label || !citation) return
+
+      button.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(citation)
+          label.textContent = button.dataset.copiedLabel ?? 'Copied'
+          window.setTimeout(() => {
+            label.textContent = button.dataset.copyLabel ?? 'Copy citation'
+          }, 1600)
+        } catch {
+          label.textContent = '复制失败'
+        }
+      })
+    }
+  }
+
+  if (!customElements.get('paper-citation')) {
+    customElements.define('paper-citation', PaperCitation)
+  }
+</script>
