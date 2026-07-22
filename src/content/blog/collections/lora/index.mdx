@@ -1,0 +1,102 @@
+---
+title: 'Before LoRA: Measuring the Intrinsic Dimension'
+description: 通过 random subspace training，理解完成一个任务所需的 degrees of freedom 为什么可能远低于模型参数量。
+publishDate: 2026-07-22
+category: research
+tags:
+  - intrinsic-dimension
+  - random-subspace
+  - deep-learning
+draft: false
+translationStatus: complete
+---
+
+import { InfoDrawer, PaperCitation } from '@/components/custom'
+
+这篇文章讨论论文 [_Measuring the Intrinsic Dimension of Objective Landscapes_](https://arxiv.org/abs/1804.08838)。这篇论文的主要目标不是提出现代意义上的 parameter-efficient training 方法，而是测量 objective landscape 的 intrinsic dimension。它通过实验说明：神经网络虽然拥有大量参数，完成一个任务所需的有效 degrees of freedom 却可能远低于参数总数。
+
+<PaperCitation
+  title='Measuring the Intrinsic Dimension of Objective Landscapes'
+  authors={['Chunyuan Li', 'Heerad Farkhoor', 'Rosanne Liu', 'Jason Yosinski']}
+  venue='ICLR'
+  year={2018}
+  arxiv='1804.08838'
+  pdf='https://arxiv.org/pdf/1804.08838'
+/>
+
+## 论文想说明什么
+
+论文主要论证的是：完成一个任务所需的有效 degrees of freedom，可能远低于模型的参数总数。
+
+在一个 $D$ 维参数空间中，即使把优化限制在一个小得多的 $d$ 维随机子空间中，模型仍然可能达到 direct training 基准性能的 $90\%$。
+
+一种几何直觉是：随着 $d$ 增大，穿过初始化点的 random affine subspace 更有可能与完整参数空间中的 good-solution region 相交。虽然优化器只能在这个 random affine subspace 中移动，它仍然可能找到一个性能足够好的 parameter configuration。这是理解实验的直觉，而不是对一般非线性 objective landscape 的严格证明。
+
+## 参数空间
+
+假设一个模型有 $D$ 个参数。把所有参数展开后，可以将它们看成一个 $D$ 维向量：$\theta \in \mathbb{R}^{D}$。
+
+所有可能的参数向量一起构成一个 $D$ 维参数空间。训练的目标，就是在这个空间中找到一个最优点 $\theta_{\mathrm{best}}$，使损失函数 $L(\theta_{\mathrm{best}})$ 尽可能小。
+
+Direct training 可以在完整的 $D$ 维参数空间中移动，因此最多拥有 $D$ 个可训练的 degrees of freedom。
+
+## Random subspace training
+
+为了验证上面的猜想，论文不再直接训练全部 $D$ 个参数，而是在 $D$ 维空间中随机取出 $d$ 个 $D$ 维向量。
+
+这些向量通过 Gaussian distribution sampling 得到。只要 $d\leq D$，独立采样得到的 Gaussian 随机向量就以概率 1 linearly independent，因此它们张成一个 $d$ 维子空间。在高维空间中，它们通常还近似 orthogonal。
+
+把这 $d$ 个向量作为列排列起来，得到一个 $D \times d$ 矩阵：$P \in \mathbb{R}^{D \times d}$。
+
+<InfoDrawer title='为什么 Gaussian random vectors 近似 orthogonal？' defaultWidth={580}>
+  设两个独立的 Gaussian 随机向量为 $p_i,p_j \in \mathbb{R}^{D}$。由于两个向量独立，并且每个坐标的均值都是 $0$，它们内积的期望也是 $0$：$\mathbb{E}[p_i^T p_j]=0$。
+
+归一化后，两个向量之间的余弦相似度为 $\frac{p_i^T p_j}{\lVert p_i\rVert\lVert p_j\rVert}$。
+
+当 $D$ 很大时，这个值会集中在 $0$ 附近，其典型量级大约是 $O(D^{-1/2})$。因此，两个独立的高维 Gaussian 随机向量通常接近 orthogonal。
+
+这里说的是 approximately orthogonal，而不是 strictly orthogonal。独立性来自采样过程，不是高维空间的结果；在几何上更重要的是，当 $d\leq D$ 时这些向量以概率 1 linearly independent。
+
+</InfoDrawer>
+
+## 训练方法
+
+基准模型按照原来的方式进行 direct training，并记录它的基准性能。
+
+在 random subspace training 中，模型参数写成 $\theta=\theta_0+Pz$。
+
+其中：
+
+- $\theta_0$ 是初始参数，并且在训练中保持固定；
+- $P$ 是上面得到的随机投影矩阵，也保持固定；
+- $z \in \mathbb{R}^{d}$ 是可训练参数，并被初始化为零，因此训练开始时 $\theta=\theta_0$。
+
+因此，优化器实际上只更新 $z$。当前参数相对于初始化点的位移为 $\theta-\theta_0=Pz$；如果表示第 $t$ 次优化步骤，则有 $\theta_t-\theta_{t-1}=P(z_t-z_{t-1})$。
+
+虽然 $\theta$ 仍然是一个 $D$ 维向量，但只要 $P$ full column rank，训练过程中真正可以独立控制的就只有 $d$ 个坐标。也就是说，可训练的 degrees of freedom 从 $D$ 降到了 $d$。
+
+## Measuring intrinsic dimension
+
+接下来通过逐渐增大 $d$，观察性能曲线在哪里越过指定阈值。
+
+从较小的 $d$ 开始，在对应的随机子空间中多次训练；然后逐渐增加 $d$，直到模型性能达到 direct training 基准的 $90\%$。论文把最早跨过这个阈值的子空间维度估计值记为 $d_{\mathrm{int}90}$。
+
+如果用 $A_{\mathrm{base}}$ 表示 direct training 的基准性能，用 $A(d)$ 表示在 $d$ 维随机子空间中训练后的性能，那么它的理想化定义是 $d_{\mathrm{int}90}=\min\left\{d\in\mathbb{N}:A(d)\geq0.9A_{\mathrm{base}}\right\}$。实际实验中的 $A(d)$ 会受到初始化、随机投影和训练噪声影响，因此 $d_{\mathrm{int}90}$ 是从性能曲线中得到的经验估计。
+
+论文选择 $90\%$，是为了在解的质量和对测量噪声的鲁棒性之间取得平衡。
+
+在当前训练设置和 $90\%$ 性能标准下，$d_{\mathrm{int}90}$ 可以看作构造一个 satisfactory solution 所需可训练 degrees of freedom 的经验上界。之所以是上界，是因为实验使用的是随机选取的子空间，它不一定是最适合这个任务的子空间。如果一个随机 $d$ 维子空间已经能够找到 good solution，那么专门为任务选择的子空间所需维度可能更低。
+
+## 论文的局限性
+
+在最直接的 dense implementation 中，固定矩阵 $P\in\mathbb{R}^{D\times d}$ 本身包含 $Dd$ 个标量。当 $d>1$ 时，这已经多于 direct training 只需保存的 $D$ 个模型参数。虽然 $P$ 不参与训练，不能算作 trainable parameters，但生成、存储以及使用它完成矩阵乘法仍然会带来额外的 memory 和 computation cost。
+
+论文也讨论了 sparse projection 和 Fastfood transform 等更节省空间的实现，因此 $Dd$ 的存储开销并不是这套方法无法避免的要求。不过，这项工作的主要价值仍然是研究 objective landscape 和 search-space dimension：它通过限制可训练的 degrees of freedom，测量解决一个任务实际需要多大的搜索空间，而不是提供一种比 direct training 更低成本的训练方式。
+
+## 这篇论文的价值
+
+这篇论文最有价值的地方，是它的实验表明：在许多被测试的模型和任务中，参数化包含大量冗余的 degrees of freedom。
+
+模型的参数总数是 $D$，不代表完成任务就真的需要 $D$ 个相互独立的优化方向。在实验中，一个小得多的 $d$ 维随机子空间仍然可以达到接近 direct training 的性能。
+
+这项工作本身不是 LoRA。它只是提供了一个后来理解 parameter-efficient training 很有用的直觉：模型很大，不代表有效参数更新也必须具有同样高的维度。这一结果也可以帮助理解包括 LoRA 在内的后续方法，不过 LoRA 使用的是可学习的 low-rank update，而不是固定的随机子空间。

@@ -1,0 +1,140 @@
+lora 诞生前夕
+arxiv/1804.08838
+这篇论文虽然没有提出实用的参数高效训练方法，但通过实验发现：神经网络虽然拥有大量参数，但完成任务所需的有效优化自由度可能远低于参数总量。这一观察为后来寻找结构化低维更新方法（如 LoRA）提供了理论动机。
+
+
+论文主要论证了： 完成任务所需的有效优化自由度可能远低于参数总量
+In a D-dimensional parameter space, optimization restricted to a much smaller d-dimensional random subspace can still achieve 90% of the full-training baseline performance. This suggests that, when d is sufficiently large, the random subspace has a great chance of intersecting the set of good solutions in the full parameter space, allowing optimization to reach a high-performing parameter configuration.
+
+主要思路如下： 
+
+```
+符号规定：\begin{table}[htbp]
+\centering
+\caption{符号定义汇总}
+\label{tab:symbols}
+\begin{tabular}{ll}
+\hline
+符号 & 定义 \\
+\hline
+
+$D$
+& 原模型中可训练标量参数的总数 \\
+
+$d$
+& 随机低维子空间的维度，也是低维训练中的可优化自由度数量 \\
+
+$\theta \in \mathbb{R}^{D}$
+& 当前完整模型参数向量 \\
+
+$\theta_{0} \in \mathbb{R}^{D}$
+& 固定的随机初始化参数向量，也是低维仿射子空间的起点 \\
+
+$P \in \mathbb{R}^{D \times d}$
+& 固定的随机方向矩阵，其列向量张成一个 $d$ 维子空间 \\
+
+$p_i \in \mathbb{R}^{D}$
+& 矩阵 $P$ 的第 $i$ 列，即完整参数空间中的第 $i$ 个随机方向 \\
+
+$z \in \mathbb{R}^{d}$
+& 低维可训练系数向量 \\
+
+$z_i \in \mathbb{R}$
+& 沿随机方向 $p_i$ 移动的标量系数 \\
+
+$\Delta \theta \in \mathbb{R}^{D}$
+& 相对于初始化参数 $\theta_0$ 的完整参数变化 \\
+
+$\Delta \theta = Pz$
+& 由低维系数生成完整参数变化的映射关系 \\
+
+$\theta = \theta_0 + Pz$
+& 随机低维子空间训练中的完整参数表达式 \\
+
+$\operatorname{Col}(P)$
+& 矩阵 $P$ 的列空间，即所有随机方向线性组合构成的子空间 \\
+
+$\mathcal{S}_d$
+& 穿过 $\theta_0$ 的随机 $d$ 维仿射子空间 \\
+
+$\mathcal{S}_d
+= \left\{
+\theta_0 + Pz : z \in \mathbb{R}^{d}
+\right\}$
+& 低维训练过程中模型能够到达的全部参数集合 \\
+
+$L(\theta)$
+& 参数为 $\theta$ 时模型的损失函数 \\
+
+$\varepsilon$
+& 定义好解集合时使用的损失阈值 \\
+
+$S_{\varepsilon}$
+& 损失不超过 $\varepsilon$ 的好解集合 \\
+
+$S_{\varepsilon}
+= \left\{
+\theta \in \mathbb{R}^{D} :
+L(\theta) \leq \varepsilon
+\right\}$
+& 好解集合的数学定义 \\
+
+$A_{\mathrm{base}}$
+& 对全部 $D$ 个参数进行完整训练后得到的基准性能 \\
+
+$A(d)$
+& 在 $d$ 维随机子空间中训练后得到的模型性能 \\
+
+$A_{90}$
+& 完整训练基准性能的 $90\%$ 阈值 \\
+
+$A_{90} = 0.9 A_{\mathrm{base}}$
+& $90\%$ 性能阈值的定义 \\
+
+$d_{\mathrm{int}90}$
+& 达到完整训练基准性能 $90\%$ 所需的随机子空间维度 \\
+
+$d_{\mathrm{int}90}
+=
+\min
+\left\{
+d :
+A(d) \geq 0.9 A_{\mathrm{base}}
+\right\}$
+& $d_{\mathrm{int}90}$ 的操作性定义 \\
+
+$s$
+& 理想几何分析中好解集合自身的维度 \\
+
+$d_{\mathrm{int}}$
+& 理想线性情形下好解集合的余维数 \\
+
+$d_{\mathrm{int}} = D-s$
+& 理想几何意义下内在维度的定义 \\
+
+$t$
+& 训练迭代步数 \\
+
+$z_t$
+& 第 $t$ 个训练步骤时的低维系数向量 \\
+
+$\theta_t = \theta_0 + Pz_t$
+& 第 $t$ 个训练步骤时的完整模型参数 \\
+
+\hline
+\end{tabular}
+\end{table}
+
+```：所有可能参数向量构成的 
+
+
+对于一个模型，其参数量为D。可以说他的目标是在D维空间中找到一个最优点，使得损失函数L（\theta_best）值最小 \theta和\theta_best是 D*1维的向量。  那么为了验证猜想，在D-dimension 的 hyperspace中找到d个D-dimension的 vector，由于用了Gaussian来随机取样，具有旋转对称性，在D极大时候，可以近似看成是orthogonal的，所以这d个vector构成了一个d-dimension的空间。  然后我们把D*d矩阵记为P
+
+base模型按照原有方式训练。试验方法中的参数θ=θ0​+Pz 其中\theta_0（初始参数）和P都是固定的，z为可训练参数。
+近似grid search d的值（多次训练） 直到达到base模型的90%performance，记为d_int90。我们认为d_int90就是达到90%performance所需要的degree of freedom的上界。
+
+//加入info-drawer说明为什么gaussian就是近似orthogonal
+
+这篇论文中有价值的：说明有冗余的dof。
+
+
