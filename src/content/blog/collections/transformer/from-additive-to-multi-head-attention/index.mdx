@@ -1,5 +1,5 @@
 ---
-title: 从 Additive Attention 到 Multi-Head Attention
+title: Transformer - 从 Additive Attention 到 Multi-Head Attention
 description: 从 Bahdanau Attention 出发，推导缩放点积注意力、多头机制以及 padding 和 causal mask。
 publishDate: 2025-04-19
 updatedDate: 2026-07-16
@@ -12,6 +12,8 @@ draft: false
 translationStatus: complete
 ---
 
+import InfoDrawer from '@/components/custom/InfoDrawer.astro'
+
 注意力机制的共同目标是：根据当前查询为一组候选信息分配权重，再将它们聚合为上下文表示。本文从机器翻译中的 Additive Attention 出发，逐步过渡到 Transformer 使用的 Multi-Head Attention。
 
 > 本文整理自 [`hengproject/ML_recall`](https://github.com/hengproject/ML_recall) 中的 [`basics/attention.ipynb`](https://github.com/hengproject/ML_recall/blob/master/basics/attention.ipynb)。参考了 [hwcoder 的手写笔记](https://hwcoder.top/Manual-Coding-1)及[《Recurrent Models of Visual Attention》精读](https://zhuanlan.zhihu.com/p/555778029)。
@@ -20,7 +22,7 @@ translationStatus: complete
 
 Bahdanau 等人在 2014 年的论文 [_Neural Machine Translation by Jointly Learning to Align and Translate_](https://arxiv.org/abs/1409.0473) 中，将注意力机制用于神经机器翻译。生成每个目标 token 时，解码器会为编码器的全部隐藏状态分配权重，并计算上下文向量。
 
-设解码器上一步的隐藏状态为 $s_{i-1}$，编码器在第 $j$ 个位置的隐藏状态为 $h_j$。
+设解码器上一步的隐藏状态(hidden_state)为 $s_{i-1}$，编码器在第 $j$ 个位置的隐藏状态(hidden_state)为 $h_j$。
 
 ### 1. 计算匹配分数
 
@@ -31,6 +33,11 @@ $$
 $W_a$、$U_a$ 和 $v_a$ 都是可训练参数。这个评分函数可视为一个带 `tanh` 的小型前馈网络，用于估计当前解码状态与每个编码器状态的匹配程度。
 
 ### 2. 归一化注意力权重
+
+<InfoDrawer title='注意力分数与权重'>
+  $e_{ij}$ 是未经归一化的注意力分数，$\alpha_{ij}$ 是经过 softmax 后得到的注意力权重，满足
+  $\sum_j\alpha_{ij}=1$，并实际用于编码器状态的加权聚合。
+</InfoDrawer>
 
 $$
 \alpha_{ij}
@@ -117,6 +124,8 @@ $$
 \operatorname{Attention}(Q,K,V)
 = \operatorname{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V.
 $$
+
+> **记号说明：** $d_k$ 是每个 Query 和 Key 向量的维度，也就是点积中相加项的数量。从这里开始，后文中的 $d_x$ 均表示向量 $x$ 的维度。
 
 ### 为什么要缩放点积
 
