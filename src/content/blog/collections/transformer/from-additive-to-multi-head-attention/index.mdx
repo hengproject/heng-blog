@@ -32,6 +32,42 @@ $$
 
 $W_a$、$U_a$ 和 $v_a$ 都是可训练参数。这个评分函数可视为一个带 `tanh` 的小型前馈网络，用于估计当前解码状态与每个编码器状态的匹配程度。
 
+<InfoDrawer title='为什么看起来和 Vanilla RNN 这么像？' defaultWidth={680}>
+  觉得这个匹配函数像 Vanilla RNN，并不是错觉。它们确实使用了几乎相同的计算模板：两个线性变换相加，再经过 `tanh`。
+
+Vanilla RNN 的典型状态更新是 $h_t=\tanh(W_xx_t+W_hh_{t-1}+b)$，Additive Attention 的匹配函数是 $e_{ij}=v_a^T\tanh(W_as_{i-1}+U_ah_j)$。
+
+把两者并排看，对应关系会更明显：
+
+| Vanilla RNN            | Additive Attention                  |
+| ---------------------- | ----------------------------------- |
+| 当前输入 $x_t$         | 第 $j$ 个编码器状态 $h_j$           |
+| 上一步状态 $h_{t-1}$   | 上一步解码器状态 $s_{i-1}$          |
+| $W_xx_t+W_hh_{t-1}$    | $U_ah_j+W_as_{i-1}$                 |
+| 输出新的隐藏状态 $h_t$ | 再乘 $v_a^T$，输出匹配分数 $e_{ij}$ |
+
+它们看起来相似，是因为两者都在做同一类计算：把两个向量投影到同一个隐藏空间，相加后再经过非线性变换。
+
+在 Additive Attention 中，可以先写出 $z_{ij}=\tanh(W_as_{i-1}+U_ah_j)$。这里的 $z_{ij}$ 是一个联合表示，表示当前解码需求 $s_{i-1}$ 与第 $j$ 个编码器状态 $h_j$ 组合之后的结果。随后再计算 $e_{ij}=v_a^Tz_{ij}$，把这个向量压缩成一个标量匹配分数。
+
+因此，它本质上是一个单隐藏层前馈神经网络：$[s_{i-1},h_j]\longrightarrow z_{ij}\longrightarrow e_{ij}$。把两个输入拼接起来后，评分函数也可以写成 $e_{ij}=v_a^T\tanh\left([W_a\ U_a]\begin{bmatrix}s_{i-1}\\h_j\end{bmatrix}\right)$。论文只是把两个向量分别投影后相加，没有直接写成拼接形式。
+
+不过，它本身不是 RNN。关键区别在于是否存在时间递归。
+
+RNN 计算 $h_t=f(x_t,h_{t-1})$ 后，得到的 $h_t$ 会继续参与下一时刻的计算，即 $h_{t-1}\rightarrow h_t\rightarrow h_{t+1}$。
+
+Attention 打分计算的是 $e_{ij}=f(s_{i-1},h_j)$。得到的 $e_{ij}$ 只是当前位置的匹配分数，不会作为 attention 网络的隐藏状态继续传递。对于固定的解码步骤 $i$，$e_{i1},e_{i2},\ldots,e_{iT}$ 之间不存在 $e_{i1}\rightarrow e_{i2}\rightarrow e_{i3}$ 这样的递归关系，因此这些分数可以并行计算。
+
+更准确地说，Additive Attention 的评分函数长得像 RNN 的状态更新函数，但它是一个前馈网络，而不是循环网络。
+
+这种形式也和它的历史背景有关。Bahdanau Attention 本来就是为 RNN Encoder–Decoder 设计的。当时已经有编码器状态 $h_j$ 和解码器状态 $s_{i-1}$，研究者需要一个可训练函数判断二者是否匹配，自然采用了当时常见的 $\tanh(Wx+Uh)$ 结构。可以把它理解为：用一个结构类似 RNN 单元内部计算的小型 MLP，给两个隐藏状态打分。
+
+$v_a^T$ 是 RNN 状态更新公式中没有的部分。RNN 中，`tanh` 的输出本身就是新的隐藏向量；attention 最终需要的却是一个标量分数。若 $z_{ij},v_a\in\mathbb{R}^{d_a}$，那么 $v_a^Tz_{ij}\in\mathbb{R}$。这个标量越大，表示第 $j$ 个编码器位置与当前解码步骤越匹配。之后再对所有 $e_{ij}$ 做 softmax，得到真正用于加权聚合的注意力权重 $\alpha_{ij}$。
+
+所以，直觉可以更准确地表述为：它不是一个 RNN，而是它的隐藏层采用了与经典 RNN 单元相同的“两个线性投影相加，再经过 `tanh`”的计算结构。并且 $s_{i-1}$ 本身通常就来自 RNN 解码器，因此整套公式在视觉上会更像 RNN。
+
+</InfoDrawer>
+
 ### 2. 归一化注意力权重
 
 <InfoDrawer title='注意力分数与权重'>
