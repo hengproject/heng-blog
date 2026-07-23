@@ -1,0 +1,10 @@
+title:
+  zh: Before LoRA
+  en: Before LoRA
+description:
+  zh: 从 intrinsic dimension 到高效随机投影，理解低维参数更新如何走向 parameter-efficient training。
+  en: From intrinsic dimension to efficient random projections and parameter-efficient training.
+# Directory placement alone does not add a post. This list controls membership and reading order.
+posts:
+  - lora
+  - efficient-random-projections

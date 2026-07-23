@@ -1,6 +1,8 @@
 ---
-import { type TocItem } from '@/plugins/toc'
+import katex from 'katex'
+
 import { cn } from '@/utils'
+import { type TocItem } from '@/plugins/toc'
 
 interface Props {
   heading: TocItem
@@ -9,6 +11,38 @@ interface Props {
 const {
   heading: { depth, slug, subheadings, text }
 } = Astro.props
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;')
+}
+
+function renderHeadingText(value: string) {
+  return value
+    .split(/(\$[^$\n]+\$|[A-Za-z][A-Za-z0-9]*(?:[_^]\{[^{}\n]+\})+)/u)
+    .map((part) => {
+      const delimited = part.startsWith('$') && part.endsWith('$')
+      const bareScript = /^[A-Za-z][A-Za-z0-9]*(?:[_^]\{[^{}\n]+\})+$/u.test(part)
+      if (!delimited && !bareScript) return escapeHtml(part)
+
+      try {
+        return katex.renderToString(delimited ? part.slice(1, -1) : part, {
+          displayMode: false,
+          output: 'htmlAndMathml',
+          throwOnError: true
+        })
+      } catch {
+        return escapeHtml(part)
+      }
+    })
+    .join('')
+}
+
+const renderedText = renderHeadingText(text)
 ---
 
 <li>
@@ -24,7 +58,7 @@ const {
         depth === 4 && 'ps-10',
         depth === 5 && 'ps-14'
       )}
-      href={`#${slug}`}>{text}</a
+      href={`#${slug}`}><span set:html={renderedText} /></a
     >
   </div>
   {
