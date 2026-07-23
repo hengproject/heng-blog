@@ -1,10 +1,11 @@
 title:
-  zh: Before LoRA
-  en: Before LoRA
+  zh: LoRA
+  en: LoRA
 description:
-  zh: 从 intrinsic dimension 到高效随机投影，理解低维参数更新如何走向 parameter-efficient training。
-  en: From intrinsic dimension to efficient random projections and parameter-efficient training.
+  zh: 从 intrinsic dimension 和高效随机投影出发，理解 LoRA 的 low-rank parameterization、训练与推理实现。
+  en: From intrinsic dimension and efficient random projections to LoRA implementation.
 # Directory placement alone does not add a post. This list controls membership and reading order.
 posts:
   - before-lora-1
   - before-lora-2
+  - lora

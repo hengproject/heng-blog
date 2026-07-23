@@ -1,0 +1,73 @@
+lora
+
+//paper info arxiv/2106.09685
+
+此前的模型对于下游任务的适配通常是adapter模式和prompt engineering模式
+adapter通过给每个layer加入一个小的适配模块来调整。尽管仅有1%的参数量，但是问题在于需要顺序执行，在大规模在线推理的情况下，会导致效率低下。
+
+
+```Inspired by this, we hypothe-
+size the updates to the weights also have a low “intrinsic rank” during adaptation. For a pre-trained
+weight matrix W0 ∈ Rd×k, we constrain its update by representing the latter with a low-rank de-
+composition W0 + ∆W = W0 + BA, where B ∈ Rd×r , A ∈ Rr×k, and the rank r ≪ min(d, k).
+During training, W0 is frozen and does not receive gradient updates, while A and B contain trainable
+parameters. Note both W0 and ∆W = BA are multiplied with the same input, and their respective
+output vectors are summed coordinate-wise. For h = W0x, our modified forward pass yields:
+h = W0x + ∆W x = W0x + BAx (3)
+We illustrate our reparametrization in Figure 1. We use a random Gaussian initialization for A and
+zero for B, so ∆W = BA is zero at the beginning of training. We then scale ∆W x by α
+r , where α
+is a constant in r. When optimizing with Adam, tuning α is roughly the same as tuning the learning
+rate if we scale the initialization appropriately. As a result, we simply set α to the first r we try
+and do not tune it. This scaling helps to reduce the need to retune hyperparameters when we vary
+r (Yang & Hu
+``` at chapter 4.1
+
+
+```
+ΔW=BA
+
+其中：
+
+B∈R
+d×r
+,A∈R
+r×k
+
+于是根据矩阵乘积的性质：
+
+rank(BA)≤min(rank(B),rank(A))≤r
+
+所以天然有：
+
+rank(ΔW)≤r
+	​
+
+
+这就是约束方式。
+
+为什么这个结构一定限制秩
+
+看计算路径：
+
+x∈R
+k
+⟶
+A
+	​
+
+z∈R
+r
+⟶
+B
+	​
+
+Δh∈R
+d
+
+所有输入变化都必须先通过一个 r 维中间空间。
+
+无论输入维度 k 和输出维度 d 多大，这条更新分支最多只能通过 r 个独立中间方向传递变化。
+
+因此 ΔW 不可能拥有超过 r 个独立输入—输出模式。
+```

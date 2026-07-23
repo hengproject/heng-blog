@@ -1,0 +1,198 @@
+---
+title: 'LoRA: Low-Rank Adaptation'
+description: 从 LoRA 的 low-rank update 出发，理解 rank 约束、训练与推理实现，以及它和 intrinsic dimension 的关系。
+publishDate: 2026-07-23
+category: research
+tags:
+  - lora
+  - low-rank-update
+  - parameter-efficient-training
+  - transformer
+draft: false
+translationStatus: complete
+---
+
+import { InfoDrawer, PaperCitation } from '@/components/custom'
+
+在第一篇论文中，我们讨论了 intrinsic dimension：模型虽然位于一个很大的参数空间中，但完成特定任务可能只需要很少的 degrees of freedom。random subspace training 使用一个固定的随机投影，把低维可训练参数映射回完整参数空间，从而测量任务真正需要的训练维度。
+
+第二篇论文继续讨论了如何使用 Sparse projection 和 Fastfood 降低随机投影的计算与存储成本，以及如何把 intrinsic dimension 用到预训练模型上。实验进一步表明：模型规模虽然很大，下游适配所需要的有效训练空间却可能很小。
+
+这自然带来一个新的问题：如果下游任务只需要少量有效的更新方向，那么这些方向能否直接反映在权重更新 matrix 的结构中？
+
+random subspace training 只能说明完整参数更新可能位于一个低维 subspace，并没有说明更新本身具有怎样的结构。LoRA 在此基础上提出了一个更具体、也更强的假设：对于某个权重矩阵 $\underline{\underline{W_0}}$，下游适配产生的更新 $\underline{\underline{\Delta W}}$ 可能只需要少量独立的输入—输出方向，因此具有较低的 intrinsic rank。
+
+如果这个假设成立，就可以让输入先经过一个 $r$ 维瓶颈，再映射回输出空间，也就是令 $\underline{\underline{\Delta W}}=\underline{\underline{B}}\underline{\underline{A}}$。这样 $\operatorname{rank}(\underline{\underline{\Delta W}})\leq r$，训练也不再需要直接学习完整的 $\underline{\underline{\Delta W}}$。
+
+这篇文章讨论论文 [_LoRA: Low-Rank Adaptation of Large Language Models_](https://arxiv.org/abs/2106.09685)。论文的核心贡献，是把下游任务对权重矩阵的完整更新改写成两个小矩阵的乘积。训练时冻结预训练模型，只学习这个 low-rank update；推理时还可以把它合并回原始权重矩阵。
+
+本文先简要介绍论文解决的问题和主要贡献，然后重点讨论 LoRA 的具体实现：rank 是怎样被约束的，训练时 $\underline{\underline{A}}$、$\underline{\underline{B}}$ 如何参与前向计算和梯度更新，以及推理时如何加载或合并 adapter。
+
+> **记号说明：** 本文用单下划线表示 vector，用双下划线表示 matrix；scalar 不加下划线。
+
+<PaperCitation
+  title='LoRA: Low-Rank Adaptation of Large Language Models'
+  authors={[
+    'Edward J. Hu',
+    'Yelong Shen',
+    'Phillip Wallis',
+    'Zeyuan Allen-Zhu',
+    'Yuanzhi Li',
+    'Shean Wang',
+    'Lu Wang',
+    'Weizhu Chen'
+  ]}
+  venue='ICLR'
+  year={2022}
+  arxiv='2106.09685'
+  pdf='https://arxiv.org/pdf/2106.09685'
+/>
+
+## 论文贡献与内容
+
+对每一个下游任务做全量微调，需要训练并保存一套与原模型同样大的参数。Adapter 虽然只增加少量参数，但会在原网络中加入需要顺序执行的新模块；prefix tuning 则会占用一部分序列长度。
+
+LoRA 希望同时满足下面几个目标：
+
+- 冻结预训练参数，只训练少量新增参数；
+- 不在网络中加入额外的串行层；
+- 不占用输入 token；
+- 每个任务只保存很小的 adapter；
+- 合并 adapter 后不增加推理延迟。
+
+围绕这个目标，论文给出了 low-rank update 的具体参数化方法，并在 RoBERTa、DeBERTa、GPT-2 和 GPT-3 上与全量微调、Adapter 和 prefix-based 方法进行了比较。实验中，LoRA 使用更少的可训练参数，模型质量仍然可以达到或超过全量微调。论文还进一步分析了 LoRA 应该放在哪些权重矩阵、不同 rank 的效果，以及不同训练得到的主要更新方向是否重合。
+
+论文受到 intrinsic dimension 研究的启发：一个预训练模型虽然有大量参数，下游任务可能只需要少量有效的更新方向。但 LoRA 没有继续使用覆盖整个模型的 random subspace，而是提出一个新的经验假设：
+
+> 下游适配产生的权重更新，可能具有较低的 intrinsic rank。
+
+这里需要先保留一个逻辑边界：low intrinsic dimension 并不能直接推出 low-rank weight update。LoRA 从前者获得启发，再通过实验验证后者是一种有效的参数化方法；它不是一个由 intrinsic dimension 推导出来的定理。
+
+## LoRA 的核心实现
+
+考虑一个预训练线性层，其权重矩阵为 $\underline{\underline{W_0}}\in\mathbb{R}^{d\times k}$，输入为 $\underline{x}\in\mathbb{R}^k$，原始前向计算是 $\underline{h}=\underline{\underline{W_0}}\underline{x}$。
+
+全量微调会直接学习一个完整更新 $\underline{\underline{\Delta W}}\in\mathbb{R}^{d\times k}$，使新的权重变为 $\underline{\underline{W}}=\underline{\underline{W_0}}+\underline{\underline{\Delta W}}$。
+
+LoRA 不直接训练 $\underline{\underline{\Delta W}}$，而是令 $\underline{\underline{\Delta W}}=\underline{\underline{B}}\underline{\underline{A}}$，其中 $\underline{\underline{A}}\in\mathbb{R}^{r\times k}$、$\underline{\underline{B}}\in\mathbb{R}^{d\times r}$，并且 $r\ll\min(d,k)$。
+
+于是前向计算变为 $\underline{h}=\underline{\underline{W_0}}\underline{x}+\frac{\alpha}{r}\underline{\underline{B}}\underline{\underline{A}}\underline{x}$。
+
+训练过程中：
+
+- $\underline{\underline{W_0}}$ 保持冻结；
+- $\underline{\underline{A}}$ 和 $\underline{\underline{B}}$ 是可训练参数；
+- $\underline{\underline{A}}$ 使用高斯分布初始化；
+- $\underline{\underline{B}}$ 初始化为零；
+- 因此训练开始时 $\underline{\underline{B}}\underline{\underline{A}}=0$，模型与原始预训练模型完全相同。
+
+### Rank 是怎样被约束的
+
+LoRA 不需要在训练过程中反复计算 $\operatorname{rank}(\underline{\underline{\Delta W}})$，也没有给损失函数加入“rank 不得超过 $r$”的惩罚项。它直接通过因子分解限制可表示的更新。
+
+<InfoDrawer title='为什么 rank(BA) 不会超过 r？' defaultWidth={620}>
+  根据矩阵乘法的性质，$\operatorname{rank}(\underline{\underline{B}}\underline{\underline{A}})\leq\min(\operatorname{rank}(\underline{\underline{B}}),\operatorname{rank}(\underline{\underline{A}}))\leq r$。
+
+从计算路径看，$\underline{x}\in\mathbb{R}^k$ 必须先经过 $\underline{\underline{A}}$，变成一个 $r$ 维中间 vector，再经过 $\underline{\underline{B}}$ 映射到 $\mathbb{R}^d$。所有更新都必须通过这个 $r$ 维瓶颈，所以最多只能传递 $r$ 个独立的输入—输出模式。
+
+还可以把乘积写成 $\underline{\underline{B}}\underline{\underline{A}}=\sum_{i=1}^r\underline{b_i}\underline{a_i}^T$。每个 $\underline{b_i}\underline{a_i}^T$ 都是 rank-$1$ matrix，因此它们的和最多是 rank $r$。
+
+所以 $r$ 是 rank 上限，而不是最终 rank 的保证值。即使设置 $r=8$，训练得到的更新也可能只有更低的 effective rank。
+
+</InfoDrawer>
+
+完整更新需要训练 $dk$ 个参数，LoRA 只需要训练 $r(d+k)$ 个参数。例如当 $d=k=4096$、$r=8$ 时，完整更新包含 $16{,}777{,}216$ 个参数，而 LoRA 只需要 $65{,}536$ 个参数。
+
+### 初始化以后，谁先开始学习
+
+训练开始时 $\underline{\underline{B}}=0$，所以 LoRA 分支的输出为零。暂时省略常数 scaling $\alpha/r$，设损失函数对 $\underline{\underline{\Delta W}}$ 的梯度为 $\underline{\underline{G}}$，则 $\frac{\partial L}{\partial\underline{\underline{B}}}=\underline{\underline{G}}\underline{\underline{A}}^T$，通常不为零；而 $\frac{\partial L}{\partial\underline{\underline{A}}}=\underline{\underline{B}}^T\underline{\underline{G}}=0$。
+
+因此第一步主要是 $\underline{\underline{B}}$ 开始变化。等 $\underline{\underline{B}}$ 不再为零后，$\underline{\underline{A}}$ 也会收到梯度，随后两个 matrix 共同学习。
+
+可以把计算顺序直观地理解为：
+
+- $\underline{\underline{A}}$ 把输入映射到 $r$ 维坐标；
+- $\underline{\underline{B}}$ 把这 $r$ 个坐标映射成输出修正。
+
+这是一种有用的计算直觉，但 $\underline{\underline{B}}\underline{\underline{A}}$ 的因子分解并不唯一，所以不应该把 $\underline{\underline{A}}$ 的某一行或 $\underline{\underline{B}}$ 的某一列解释成唯一确定的语义方向。
+
+### 训练伪代码
+
+```python
+class LoRALinear(nn.Module):
+    def __init__(self, base_linear, rank, alpha):
+        super().__init__()
+        self.base = base_linear
+        for parameter in self.base.parameters():
+            parameter.requires_grad = False
+
+        d_out, d_in = self.base.weight.shape
+        self.A = nn.Parameter(torch.randn(rank, d_in))
+        self.B = nn.Parameter(torch.zeros(d_out, rank))
+        self.scale = alpha / rank
+
+    def forward(self, x):
+        original = self.base(x)
+        update = (x @ self.A.T) @ self.B.T
+        return original + self.scale * update
+```
+
+训练模型时，optimizer 只接收 LoRA 参数：
+
+```python
+model = load_pretrained_model()
+freeze(model)
+insert_lora(model, target_modules=["q_proj", "v_proj"])
+
+optimizer = Adam(lora_parameters(model))
+
+for batch in dataset:
+    logits = model(batch.input)
+    loss = cross_entropy(logits, batch.label)
+
+    loss.backward()
+    optimizer.step()
+    optimizer.zero_grad()
+```
+
+原论文在大多数实验中把 LoRA 加到 self-attention 的 Query 和 Value projection 上，并冻结 MLP。LoRA 的参数化方法本身并不局限于这两个 matrix，也可以用于其他 dense layer。
+
+## 推理时如何使用 LoRA
+
+### 动态加载 adapter
+
+如果希望同一个基础模型快速切换不同任务，可以保留 LoRA 分支：
+
+```python
+original = W0(x)
+update = B(A(x))
+output = original + alpha / rank * update
+```
+
+这样只需切换很小的 $\underline{\underline{A}}$、$\underline{\underline{B}}$，不必为每个任务重新加载一套完整模型。代价是前向计算中仍然存在一次额外的 low-rank 计算。
+
+### 合并到原始权重
+
+因为原分支和 LoRA 分支都是线性的，所以可以提前计算 $\underline{\underline{W_{\mathrm{merged}}}}=\underline{\underline{W_0}}+\frac{\alpha}{r}\underline{\underline{B}}\underline{\underline{A}}$。
+
+```python
+with torch.no_grad():
+    W0.weight += alpha / rank * (B @ A)
+```
+
+合并后，推理仍然只执行普通 linear layer。LoRA 的优势是相对全量微调不会增加推理延迟，但 matrix 的形状没有变，因此它通常不会让基础模型的推理本身更快。
+
+合并也有代价：如果同一个 batch 中的样本需要使用不同的 adapter，就很难在一次普通 matrix multiplication 中同时完成。保留未合并的 LoRA 分支可以动态选择 adapter，但会重新引入额外计算和延迟。
+
+## 论文的局限性
+
+- low-rank update 是由实验支持的经验假设，不是从 intrinsic dimension 严格推导出的结论；合适的 rank 会随模型、任务和目标 matrix 改变。
+- 原论文主要研究 Transformer 的 attention 权重，MLP、LayerNorm 和 bias 的系统性比较被留作后续工作。
+- 合并 LoRA 可以消除额外推理延迟，却不适合在同一个 batch 中为不同样本动态选择不同 adapter；不合并则需要接受额外计算。
+- 论文证明了 LoRA 是一种有效的 parameter-efficient training 方法，但没有证明所有下游任务的最优更新都一定是 low rank。
+
+## 总结
+
+LoRA 的实现可以压缩成一句话：冻结 $\underline{\underline{W_0}}$，训练满足 $\operatorname{rank}(\underline{\underline{\Delta W}})\leq r$ 的 $\underline{\underline{\Delta W}}=\underline{\underline{B}}\underline{\underline{A}}$，再根据部署需求选择保留分支或合并权重。
+
+它与 intrinsic dimension 的联系主要是一种研究动机：两者都在追问下游训练究竟需要多少有效的 degrees of freedom。LoRA 的关键推进，是把这个问题落实成对每个权重更新 matrix 的 low-rank 结构约束，并给出了可以直接训练、保存和部署的实现。
