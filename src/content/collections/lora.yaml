@@ -6,5 +6,5 @@ description:
   en: From intrinsic dimension to efficient random projections and parameter-efficient training.
 # Directory placement alone does not add a post. This list controls membership and reading order.
 posts:
-  - lora
-  - efficient-random-projections
+  - before-lora-1
+  - before-lora-2
