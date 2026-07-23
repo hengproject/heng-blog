@@ -22,49 +22,58 @@ import InfoDrawer from '@/components/custom/InfoDrawer.astro'
 
 Bahdanau 等人在 2014 年的论文 [_Neural Machine Translation by Jointly Learning to Align and Translate_](https://arxiv.org/abs/1409.0473) 中，将注意力机制用于神经机器翻译。生成每个目标 token 时，解码器会为编码器的全部隐藏状态分配权重，并计算上下文向量。
 
-设解码器上一步的隐藏状态(hidden_state)为 $s_{i-1}$，编码器在第 $j$ 个位置的隐藏状态(hidden_state)为 $h_j$。
+设解码器上一步的隐藏状态（`hidden_state`）为 $\underline{s_{i-1}}$，编码器的全部隐藏状态为 $\{\underline{h_1},\ldots,\underline{h_{T_x}}\}$。生成目标 token $y_i$ 时，需要判断当前解码状态应该关注源序列中的哪些位置，因此要分别计算 $\underline{s_{i-1}}$ 与每个 $\underline{h_j}$ 的匹配程度。
+
+> **记号说明：** 下文用单下划线表示 vector，用双下划线表示 matrix；scalar 不加下划线。
 
 ### 1. 计算匹配分数
 
 $$
-e_{ij} = v_a^T\tanh(W_a s_{i-1} + U_a h_j).
+e_{ij}
+= \underline{v_a}^T
+\tanh\left(
+\underline{\underline{W_a}}\underline{s_{i-1}}
++ \underline{\underline{U_a}}\underline{h_j}
+\right).
 $$
 
-$W_a$、$U_a$ 和 $v_a$ 都是可训练参数。这个评分函数可视为一个带 `tanh` 的小型前馈网络，用于估计当前解码状态与每个编码器状态的匹配程度。
+$\underline{\underline{W_a}}$、$\underline{\underline{U_a}}$ 和 $\underline{v_a}$ 都是可训练参数。若 $\underline{s_{i-1}}\in\mathbb{R}^{d_s}$、$\underline{h_j}\in\mathbb{R}^{d_h}$，并将 attention 隐藏空间的维度记为 $d_a$，那么 $\underline{\underline{W_a}}\in\mathbb{R}^{d_a\times d_s}$、$\underline{\underline{U_a}}\in\mathbb{R}^{d_a\times d_h}$、$\underline{v_a}\in\mathbb{R}^{d_a}$。
+
+这个评分函数可视为一个带 `tanh` 的小型前馈网络，用于估计当前解码状态与每个编码器状态的匹配程度。$\underline{v_a}$ 的主要作用是将 `tanh` 输出的 vector 转换成 scalar，作为最终的匹配分数 $e_{ij}$。
 
 <InfoDrawer title='为什么看起来和 Vanilla RNN 这么像？' defaultWidth={680}>
   觉得这个匹配函数像 Vanilla RNN，并不是错觉。它们确实使用了几乎相同的计算模板：两个线性变换相加，再经过 `tanh`。
 
-Vanilla RNN 的典型状态更新是 $h_t=\tanh(W_xx_t+W_hh_{t-1}+b)$，Additive Attention 的匹配函数是 $e_{ij}=v_a^T\tanh(W_as_{i-1}+U_ah_j)$。
+Vanilla RNN 的典型状态更新是 $\underline{h_t}=\tanh(\underline{\underline{W_x}}\underline{x_t}+\underline{\underline{W_h}}\underline{h_{t-1}}+\underline{b})$，Additive Attention 的匹配函数是 $e_{ij}=\underline{v_a}^T\tanh(\underline{\underline{W_a}}\underline{s_{i-1}}+\underline{\underline{U_a}}\underline{h_j})$。
 
 把两者并排看，对应关系会更明显：
 
-| Vanilla RNN            | Additive Attention                  |
-| ---------------------- | ----------------------------------- |
-| 当前输入 $x_t$         | 第 $j$ 个编码器状态 $h_j$           |
-| 上一步状态 $h_{t-1}$   | 上一步解码器状态 $s_{i-1}$          |
-| $W_xx_t+W_hh_{t-1}$    | $U_ah_j+W_as_{i-1}$                 |
-| 输出新的隐藏状态 $h_t$ | 再乘 $v_a^T$，输出匹配分数 $e_{ij}$ |
+| Vanilla RNN                                                                                 | Additive Attention                                                                          |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| 当前输入 $\underline{x_t}$                                                                  | 第 $j$ 个编码器状态 $\underline{h_j}$                                                       |
+| 上一步状态 $\underline{h_{t-1}}$                                                            | 上一步解码器状态 $\underline{s_{i-1}}$                                                      |
+| $\underline{\underline{W_x}}\underline{x_t}+\underline{\underline{W_h}}\underline{h_{t-1}}$ | $\underline{\underline{U_a}}\underline{h_j}+\underline{\underline{W_a}}\underline{s_{i-1}}$ |
+| 输出新的隐藏状态 $\underline{h_t}$                                                          | 再乘 $\underline{v_a}^T$，输出匹配分数 $e_{ij}$                                             |
 
 它们看起来相似，是因为两者都在做同一类计算：把两个向量投影到同一个隐藏空间，相加后再经过非线性变换。
 
-在 Additive Attention 中，可以先写出 $z_{ij}=\tanh(W_as_{i-1}+U_ah_j)$。这里的 $z_{ij}$ 是一个联合表示，表示当前解码需求 $s_{i-1}$ 与第 $j$ 个编码器状态 $h_j$ 组合之后的结果。随后再计算 $e_{ij}=v_a^Tz_{ij}$，把这个向量压缩成一个标量匹配分数。
+在 Additive Attention 中，可以先写出 $\underline{z_{ij}}=\tanh(\underline{\underline{W_a}}\underline{s_{i-1}}+\underline{\underline{U_a}}\underline{h_j})$。这里的 $\underline{z_{ij}}$ 是一个联合表示，表示当前解码需求 $\underline{s_{i-1}}$ 与第 $j$ 个编码器状态 $\underline{h_j}$ 组合之后的结果。随后再计算 $e_{ij}=\underline{v_a}^T\underline{z_{ij}}$，把这个向量压缩成一个标量匹配分数。
 
-因此，它本质上是一个单隐藏层前馈神经网络：$[s_{i-1},h_j]\longrightarrow z_{ij}\longrightarrow e_{ij}$。把两个输入拼接起来后，评分函数也可以写成 $e_{ij}=v_a^T\tanh\left([W_a\ U_a]\begin{bmatrix}s_{i-1}\\h_j\end{bmatrix}\right)$。论文只是把两个向量分别投影后相加，没有直接写成拼接形式。
+因此，它本质上是一个单隐藏层前馈神经网络：$[\underline{s_{i-1}},\underline{h_j}]\longrightarrow\underline{z_{ij}}\longrightarrow e_{ij}$。把两个输入拼接起来后，评分函数也可以写成 $e_{ij}=\underline{v_a}^T\tanh\left(\begin{bmatrix}\underline{\underline{W_a}}&\underline{\underline{U_a}}\end{bmatrix}\begin{bmatrix}\underline{s_{i-1}}\\\underline{h_j}\end{bmatrix}\right)$。论文只是把两个向量分别投影后相加，没有直接写成拼接形式。
 
 不过，它本身不是 RNN。关键区别在于是否存在时间递归。
 
-RNN 计算 $h_t=f(x_t,h_{t-1})$ 后，得到的 $h_t$ 会继续参与下一时刻的计算，即 $h_{t-1}\rightarrow h_t\rightarrow h_{t+1}$。
+RNN 计算 $\underline{h_t}=f(\underline{x_t},\underline{h_{t-1}})$ 后，得到的 $\underline{h_t}$ 会继续参与下一时刻的计算，即 $\underline{h_{t-1}}\rightarrow\underline{h_t}\rightarrow\underline{h_{t+1}}$。
 
-Attention 打分计算的是 $e_{ij}=f(s_{i-1},h_j)$。得到的 $e_{ij}$ 只是当前位置的匹配分数，不会作为 attention 网络的隐藏状态继续传递。对于固定的解码步骤 $i$，$e_{i1},e_{i2},\ldots,e_{iT}$ 之间不存在 $e_{i1}\rightarrow e_{i2}\rightarrow e_{i3}$ 这样的递归关系，因此这些分数可以并行计算。
+Attention 打分计算的是 $e_{ij}=f(\underline{s_{i-1}},\underline{h_j})$。得到的 $e_{ij}$ 只是当前位置的匹配分数，不会作为 attention 网络的隐藏状态继续传递。对于固定的解码步骤 $i$，$e_{i1},e_{i2},\ldots,e_{iT}$ 之间不存在 $e_{i1}\rightarrow e_{i2}\rightarrow e_{i3}$ 这样的递归关系，因此这些分数可以并行计算。
 
 更准确地说，Additive Attention 的评分函数长得像 RNN 的状态更新函数，但它是一个前馈网络，而不是循环网络。
 
-这种形式也和它的历史背景有关。Bahdanau Attention 本来就是为 RNN Encoder–Decoder 设计的。当时已经有编码器状态 $h_j$ 和解码器状态 $s_{i-1}$，研究者需要一个可训练函数判断二者是否匹配，自然采用了当时常见的 $\tanh(Wx+Uh)$ 结构。可以把它理解为：用一个结构类似 RNN 单元内部计算的小型 MLP，给两个隐藏状态打分。
+这种形式也和它的历史背景有关。Bahdanau Attention 本来就是为 RNN Encoder–Decoder 设计的。当时已经有编码器状态 $\underline{h_j}$ 和解码器状态 $\underline{s_{i-1}}$，研究者需要一个可训练函数判断二者是否匹配，自然采用了当时常见的 $\tanh(\underline{\underline{W}}\underline{x}+\underline{\underline{U}}\underline{h})$ 结构。可以把它理解为：用一个结构类似 RNN 单元内部计算的小型 MLP，给两个隐藏状态打分。
 
-$v_a^T$ 是 RNN 状态更新公式中没有的部分。RNN 中，`tanh` 的输出本身就是新的隐藏向量；attention 最终需要的却是一个标量分数。若 $z_{ij},v_a\in\mathbb{R}^{d_a}$，那么 $v_a^Tz_{ij}\in\mathbb{R}$。这个标量越大，表示第 $j$ 个编码器位置与当前解码步骤越匹配。之后再对所有 $e_{ij}$ 做 softmax，得到真正用于加权聚合的注意力权重 $\alpha_{ij}$。
+$\underline{v_a}^T$ 是 RNN 状态更新公式中没有的部分。RNN 中，`tanh` 的输出本身就是新的隐藏向量；attention 最终需要的却是一个标量分数。若 $\underline{z_{ij}},\underline{v_a}\in\mathbb{R}^{d_a}$，那么 $\underline{v_a}^T\underline{z_{ij}}\in\mathbb{R}$。这个标量越大，表示第 $j$ 个编码器位置与当前解码步骤越匹配。之后再对所有 $e_{ij}$ 做 softmax，得到真正用于加权聚合的注意力权重 $\alpha_{ij}$。
 
-所以，直觉可以更准确地表述为：它不是一个 RNN，而是它的隐藏层采用了与经典 RNN 单元相同的“两个线性投影相加，再经过 `tanh`”的计算结构。并且 $s_{i-1}$ 本身通常就来自 RNN 解码器，因此整套公式在视觉上会更像 RNN。
+所以，直觉可以更准确地表述为：它不是一个 RNN，而是它的隐藏层采用了与经典 RNN 单元相同的“两个线性投影相加，再经过 `tanh`”的计算结构。并且 $\underline{s_{i-1}}$ 本身通常就来自 RNN 解码器，因此整套公式在视觉上会更像 RNN。
 
 </InfoDrawer>
 
@@ -84,13 +93,16 @@ $$
 
 实现 softmax 时减去最大分数，可以避免指数运算溢出。
 
+这里的指数函数会把任意实数分数转换成正数，并放大不同分数之间的相对差异；除以所有指数分数之和，则把它们归一化成总和为 $1$ 的权重。
+
 ### 3. 聚合上下文
 
 $$
-c_i = \sum_{j=1}^{T_x}\alpha_{ij}h_j.
+\underline{c_i}
+= \sum_{j=1}^{T_x}\alpha_{ij}\underline{h_j}.
 $$
 
-$c_i$ 是编码器状态的加权和，表示生成第 $i$ 个目标 token 时需要的源序列信息。
+$\underline{c_i}$ 是编码器状态的加权和，表示生成第 $i$ 个目标 token 时需要的源序列信息。
 
 ### NumPy 实现
 
@@ -117,6 +129,8 @@ def additive_attention(s_prev, h, W_a, U_a, v_a):
 
 ### 支持 batch 的 PyTorch 实现
 
+这里用 `Linear` 实现 $\underline{\underline{W_a}}$ 和 $\underline{\underline{U_a}}$。它们只变换最后一个维度，因此 $s_{\mathrm{expanded}}\in\mathbb{R}^{B\times T_x\times d_s}$ 经过 $\underline{\underline{W_a}}$ 后，形状变为 $B\times T_x\times d_a$，batch 和序列长度维度保持不变。
+
 ```python
 import torch
 import torch.nn as nn
@@ -142,41 +156,130 @@ class AdditiveAttention(nn.Module):
         return context, weights
 ```
 
+## 从 Additive Attention 到 Scaled Dot-Product Attention
+
+Additive Attention 与 Scaled Dot-Product Attention 的整体流程没有改变，仍然是“评分、归一化、聚合”。变化主要发生在两处：参与计算的表示经过了更明确的投影，并且匹配分数换了一种计算方式。
+
+对单个解码状态和编码器状态，可以先建立下面的对应关系：
+
+$$
+\underline{q}^T
+= \underline{s_{i-1}}^T\underline{\underline{W_Q}},
+\qquad
+\underline{k_j}^T
+= \underline{h_j}^T\underline{\underline{W_K}},
+\qquad
+\underline{v_j}^T
+= \underline{h_j}^T\underline{\underline{W_V}}.
+$$
+
+Query $\underline{q}$ 表示当前需要寻找什么，Key $\underline{k_j}$ 用来判断第 $j$ 个位置是否匹配，Value $\underline{v_j}$ 则提供匹配后真正要聚合的内容。也就是说，Query 和 Key 负责计算注意力权重，Value 负责形成输出。
+
+Additive Attention 中，与 Query、Key 角色相近的两个中间 vector 分别是 $\underline{q_{\mathrm{add}}}=\underline{\underline{W_a}}\underline{s_{i-1}}$ 和 $\underline{k_{\mathrm{add},j}}=\underline{\underline{U_a}}\underline{h_j}$，因此评分函数可以写成 $e_{ij}=\underline{v_a}^T\tanh(\underline{q_{\mathrm{add}}}+\underline{k_{\mathrm{add},j}})$。Scaled Dot-Product Attention 则使用上面定义的 $\underline{q}$ 和 $\underline{k_j}$，把评分函数改为 $e_{ij}=\underline{q}^T\underline{k_j}/\sqrt{d_k}$。
+
+得到注意力权重后，Additive Attention 聚合原始编码器状态 $\underline{h_j}$，而 Transformer 聚合投影后的 $\underline{v_j}$。Value 投影使模型可以分别学习“用什么进行匹配”和“匹配后取出什么内容”。
+
+把一个序列中所有位置的 Query、Key 和 Value 分别堆叠起来，就得到下面使用的 matrix $\underline{\underline{Q}}$、$\underline{\underline{K}}$ 和 $\underline{\underline{V}}$。在 Transformer 的 self-attention 中，它们通常都由同一个输入序列 matrix $\underline{\underline{X}}$ 投影得到。
+
+这里把单个 token 的表示写成 row vector，因此使用 $\underline{q}^T=\underline{s_{i-1}}^T\underline{\underline{W_Q}}$。把所有 token 的 row vector 堆叠成 $\underline{\underline{X}}$ 后，就得到 $\underline{\underline{Q}}=\underline{\underline{X}}\underline{\underline{W_Q}}$。如果改用 column vector 约定，同一个投影应写成 $\underline{q}=\underline{\underline{W_Q}}^T\underline{s_{i-1}}$。
+
 ## Scaled Dot-Product Attention
 
-Transformer 在 2017 年的 [_Attention Is All You Need_](https://arxiv.org/abs/1706.03762) 中使用 Query、Key 和 Value 表示注意力计算。对输入序列矩阵 $X$：
+Transformer 在 2017 年的 [_Attention Is All You Need_](https://arxiv.org/abs/1706.03762) 中使用 Query、Key 和 Value 表示注意力计算。对输入序列矩阵 $\underline{\underline{X}}$：
 
 $$
-Q = XW_Q,
+\underline{\underline{Q}}
+= \underline{\underline{X}}\underline{\underline{W_Q}},
 \qquad
-K = XW_K,
+\underline{\underline{K}}
+= \underline{\underline{X}}\underline{\underline{W_K}},
 \qquad
-V = XW_V.
+\underline{\underline{V}}
+= \underline{\underline{X}}\underline{\underline{W_V}}.
 $$
+
+对单个注意力头，暂时省略 batch 维度。若序列长度为 $n$，则各 matrix 的形状为：
+
+$$
+\begin{aligned}
+\underline{\underline{X}}
+&\in\mathbb{R}^{n\times d_{model}}, \\
+\underline{\underline{W_Q}},
+\underline{\underline{W_K}}
+&\in\mathbb{R}^{d_{model}\times d_k}, \\
+\underline{\underline{W_V}}
+&\in\mathbb{R}^{d_{model}\times d_v}, \\
+\underline{\underline{Q}},
+\underline{\underline{K}}
+&\in\mathbb{R}^{n\times d_k}, \\
+\underline{\underline{V}}
+&\in\mathbb{R}^{n\times d_v}.
+\end{aligned}
+$$
+
+其中 $d_{model}$ 是每个 token 表示的维度。它既决定输入 embedding 的宽度，也影响后续投影 matrix 的形状和模型参数量。$d_k$ 是每个 Query、Key 的维度，$d_v$ 是每个 Value 的维度。
 
 Query 和 Key 决定“关注哪里”，Value 提供被聚合的内容。单个注意力头的计算为：
 
 $$
-\operatorname{Attention}(Q,K,V)
-= \operatorname{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V.
+\operatorname{Attention}\left(
+\underline{\underline{Q}},
+\underline{\underline{K}},
+\underline{\underline{V}}
+\right)
+= \operatorname{softmax}\left(
+\frac{
+\underline{\underline{Q}}\,
+\underline{\underline{K}}^T
+}{\sqrt{d_k}}
+\right)
+\underline{\underline{V}}.
 $$
 
-> **记号说明：** $d_k$ 是每个 Query 和 Key 向量的维度，也就是点积中相加项的数量。从这里开始，后文中的 $d_x$ 均表示向量 $x$ 的维度。
+> **维度记号：** $d_k$ 是每个 Query 和 Key 向量的维度，也就是点积中相加项的数量。从这里开始，后文中的 $d_x$ 均表示向量 $\underline{x}$ 的维度。
 
 ### 为什么要缩放点积
 
-假设 $q_i$ 与 $k_i$ 独立、均值为零且方差为一，则点积的期望与方差为：
+假设 $\underline{q},\underline{k}\in\mathbb{R}^{d_k}$，并且各分量相互独立且服从标准正态分布，即 $q_i,k_i\overset{\mathrm{i.i.d.}}{\sim}\mathcal{N}(0,1)$。先看点积中的单项：
 
 $$
 \begin{aligned}
-\mathbb{E}[q\cdot k] &= 0, \\
-\operatorname{Var}(q\cdot k)
+\mathbb{E}[q_i k_i]
+&= \mathbb{E}[q_i]\mathbb{E}[k_i]
+= 0, \\
+\operatorname{Var}(q_i k_i)
+&= \mathbb{E}\left[(q_i k_i)^2\right]
+- \mathbb{E}[q_i k_i]^2 \\
+&= \mathbb{E}[q_i^2]\mathbb{E}[k_i^2]
+= 1.
+\end{aligned}
+$$
+
+因此，整个点积的期望与方差为：
+
+$$
+\begin{aligned}
+\mathbb{E}[\underline{q}\cdot\underline{k}]
+&= \sum_{i=1}^{d_k}\mathbb{E}[q_i k_i]
+= 0, \\
+\operatorname{Var}(\underline{q}\cdot\underline{k})
 &= \sum_{i=1}^{d_k}\operatorname{Var}(q_i k_i)
 = d_k.
 \end{aligned}
 $$
 
-因此点积的标准差会随维度按 $\sqrt{d_k}$ 增长。缩放后，分数的数值范围更稳定，可降低 softmax 过早饱和、梯度过小的风险。
+因此点积的标准差会随维度按 $\sqrt{d_k}$ 增长。除以 $\sqrt{d_k}$ 后，分数的数值范围更加稳定。如果省略缩放，较大的点积容易让 softmax 输出接近 one-hot，使梯度集中在少数高分位置，其他路径难以得到有效更新。
+
+### 使用 Value 聚合
+
+对第 $i$ 个 Query，softmax 产生它对所有 Key 的注意力权重 $\alpha_{ij}$。随后使用这些权重聚合对应的 Value：
+
+$$
+\underline{o_i}
+= \sum_{j=1}^{n}\alpha_{ij}\underline{v_j}.
+$$
+
+这与 Additive Attention 中的 $\underline{c_i}=\sum_j\alpha_{ij}\underline{h_j}$ 直接对应。主要区别是 Transformer 聚合经过投影的 $\underline{v_j}$，而不是直接聚合 $\underline{h_j}$。
 
 ## Multi-Head Attention
 
@@ -190,19 +293,70 @@ $$
 
 $$
 \begin{aligned}
-\operatorname{head}_i
-&= \operatorname{Attention}(Q_i,K_i,V_i), \\
-\operatorname{MultiHead}(Q,K,V)
-&= \operatorname{Concat}(\operatorname{head}_1,\ldots,\operatorname{head}_h)W_O.
+\underline{\underline{\operatorname{head}_i}}
+&= \operatorname{Attention}\left(
+\underline{\underline{Q_i}},
+\underline{\underline{K_i}},
+\underline{\underline{V_i}}
+\right), \\
+\operatorname{MultiHead}\left(
+\underline{\underline{Q}},
+\underline{\underline{K}},
+\underline{\underline{V}}
+\right)
+&= \operatorname{Concat}\left(
+\underline{\underline{\operatorname{head}_1}},
+\ldots,
+\underline{\underline{\operatorname{head}_h}}
+\right)
+\underline{\underline{W_O}}.
 \end{aligned}
 $$
 
-对 self-attention，主要张量形状如下：
+### 从单头到多头的维度变化
+
+原 notebook 还逐步检查了 score、注意力权重、单头输出、拼接结果和最终输出的形状。省略 batch 维度时，这条计算链可以写成：
+
+$$
+\begin{aligned}
+\underline{\underline{S_i}}
+&= \frac{
+\underline{\underline{Q_i}}
+\underline{\underline{K_i}}^T
+}{\sqrt{d_k}}
+\in\mathbb{R}^{n\times n}, \\
+\underline{\underline{A_i}}
+&= \operatorname{softmax}\left(
+\underline{\underline{S_i}}
+\right)
+\in\mathbb{R}^{n\times n}, \\
+\underline{\underline{\operatorname{head}_i}}
+&= \underline{\underline{A_i}}
+\underline{\underline{V_i}}
+\in\mathbb{R}^{n\times d_v}, \\
+\underline{\underline{C}}
+&= \operatorname{Concat}\left(
+\underline{\underline{\operatorname{head}_1}},
+\ldots,
+\underline{\underline{\operatorname{head}_h}}
+\right)
+\in\mathbb{R}^{n\times(hd_v)}, \\
+\underline{\underline{W_O}}
+&\in\mathbb{R}^{(hd_v)\times d_{model}}, \\
+\underline{\underline{O}}
+&= \underline{\underline{C}}
+\underline{\underline{W_O}}
+\in\mathbb{R}^{n\times d_{model}}.
+\end{aligned}
+$$
+
+当 $d_k=d_v=d_{model}/h$ 时，$hd_v=d_{model}$，所以拼接后的宽度回到模型维度。加入 batch 维度并拆分 heads 后，主要张量形状如下：
 
 | 张量             | 形状              |
 | ---------------- | ----------------- |
 | 输入 $X$         | $(B,n,d_{model})$ |
-| 分头后的 $Q,K,V$ | $(B,h,n,d_k)$     |
+| 分头后的 $Q,K$   | $(B,h,n,d_k)$     |
+| 分头后的 $V$     | $(B,h,n,d_v)$     |
 | 注意力分数与权重 | $(B,h,n,n)$       |
 | 各头的上下文     | $(B,h,n,d_v)$     |
 | 最终输出         | $(B,n,d_{model})$ |
@@ -232,7 +386,7 @@ scores = scores.masked_fill(mask.bool(), float("-inf"))
 
 ```python
 causal = torch.triu(
-    torch.ones(seq_len, seq_len, device=x.device, dtype=torch.bool),
+    torch.ones(seq_len, seq_len, device=scores.device, dtype=torch.bool),
     diagonal=1,
 )
 scores = scores.masked_fill(causal[None, None, :, :], float("-inf"))
@@ -279,6 +433,8 @@ class MultiHeadAttention(nn.Module):
             raise ValueError("causal attention requires equal query and key lengths")
 
         def split_heads(projection, seq_len):
+            # Linear 一次生成所有 heads，再 reshape：
+            # (B, n, d_model) -> (B, n, h, d_k) -> (B, h, n, d_k)
             return projection.view(
                 batch_size, seq_len, self.num_heads, self.d_k
             ).transpose(1, 2)
@@ -309,6 +465,7 @@ class MultiHeadAttention(nn.Module):
 
         weights = F.softmax(scores, dim=-1)
         context = weights @ V
+        # transpose 后内存通常不连续，先调用 contiguous() 再 view
         context = context.transpose(1, 2).contiguous().view(
             batch_size, query_len, self.d_model
         )
