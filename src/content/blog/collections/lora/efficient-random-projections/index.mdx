@@ -1,0 +1,134 @@
+---
+title: 'Before LoRA 2: Sparse Projection, Fastfood, and SAID'
+description: 从 dense Gaussian projection 的存储问题出发，理解 Sparse projection、Fastfood 和 SAID。
+publishDate: 2026-07-22
+category: research
+tags:
+  - intrinsic-dimension
+  - random-subspace
+  - parameter-efficient-training
+  - fastfood
+draft: false
+translationStatus: complete
+---
+
+import { BlogLink, InfoDrawer, PaperCitation } from '@/components/custom'
+
+<BlogLink slug='lora' label='前文' />
+
+上一篇讨论了 intrinsic dimension：我们把训练限制在一个低维随机子空间中，然后观察模型至少需要多少 degrees of freedom，才能达到 direct training 的 $90\%$ 性能。
+
+构造这个子空间时，上一篇使用的是 dense Gaussian projection。它会产生一个 $D\times d$ 的矩阵 $P$，其中 $D$ 是完整模型的参数量，$d$ 是低维空间的维度。
+
+这个矩阵很难存储。例如，当 $d=100$ 时，$P$ 中需要保存的标量数量就是原模型参数量的 $100$ 倍。
+
+## 两种高效的随机投影
+
+原论文为 dense Gaussian projection 的存储和计算问题提供了两种近似方法：Sparse projection 和 Fastfood。
+
+### Sparse projection
+
+Sparse projection 使用了一个很巧妙的办法来构造近似 orthogonal 的随机投影矩阵。它不再让 $P$ 中的每个元素都非零，而是按照下面的分布独立采样：
+
+每个元素以 $1/\sqrt D$ 的概率被设为非零。一旦被选中，它就以相同概率取正值或负值，并且正负值的绝对值相同；其余元素为 $0$。完成采样后，再把 $P$ 的每一列归一化为单位长度。
+
+也就是说，每个元素非零的概率只有 $1/\sqrt D$。
+
+<InfoDrawer title='Sparse projection 为什么近似 orthogonal？' defaultWidth={620}>
+  假设非零元素的绝对值为 $a$。由于正负取值的概率相同，$\mathbb{E}[p_{ki}]=a\frac{1}{2\sqrt D}-a\frac{1}{2\sqrt D}=0$。
+
+对于 $P$ 中不同的两列 $p_i,p_j\in\mathbb{R}^D$，它们的内积是 $p_i^Tp_j=\sum_{k=1}^D p_{ki}p_{kj}$。
+
+当 $i\neq j$ 时，由于矩阵元素独立采样，$\mathbb{E}[p_{ki}p_{kj}]=\mathbb{E}[p_{ki}]\mathbb{E}[p_{kj}]=0$。因此，$\mathbb{E}[p_i^Tp_j]=\sum_{k=1}^D\mathbb{E}[p_{ki}p_{kj}]=0$。不同列在期望意义下互相 orthogonal。
+
+完成随机采样后，再把每一列除以自己的长度，所以每个列向量都具有单位范数。不同列的内积则会在高维随机采样下接近 $0$。
+
+因此，虽然 $P$ 高度稀疏，它的列向量仍然可以组成一组近似 orthonormal 的随机方向。这里不同列之间只是近似 orthogonal，并不是每次采样都严格正交。
+
+</InfoDrawer>
+
+因为非零元素的密度是 $1/\sqrt D$，一个 $D\times d$ 的矩阵平均只有 $\sqrt D\,d$ 个非零元素。理论上，存储和计算 $Pz$ 的复杂度都可以从 $O(Dd)$ 降到 $O(\sqrt D\,d)$。
+
+但是，这种方法并没有像预期一样在实际实现中降低那么多计算量。原论文使用 TensorFlow `SparseTensor` 时，实际加速更接近固定的十倍，而没有达到理论上的 $\sqrt D$ 倍。稀疏矩阵中的索引也会占用额外内存，所以它仍然不容易扩展到更大的模型。
+
+### Fastfood
+
+Fastfood 的想法是不显式构造 $P$，而是用一组结构简单、计算便宜的矩阵，近似一个 dense Gaussian random matrix。
+
+一个 Fastfood 变换可以写成 $M=HG\Pi HB$，其中：
+
+- $B=\operatorname{diag}(\pm1)$，负责随机改变每个坐标的符号；
+- $H$ 是 Hadamard 矩阵；
+- $\Pi$ 是随机排列矩阵；
+- $G=\operatorname{diag}(g_1,\ldots,g_d)$，其中 $g_i\sim\mathcal{N}(0,1)$，负责加入 Gaussian scaling。
+
+它的过程可以按从右到左理解。$B$ 先随机改变输入坐标的符号，第一个 $H$ 对所有坐标进行混合，$\Pi$ 再打乱坐标的对应关系，$G$ 加入随机幅度，最后一个 $H$ 再进行一次混合。
+
+<InfoDrawer title='Hadamard transform 的 orthogonal 性质' defaultWidth={620}>
+  Hadamard 矩阵满足 $HH^T=dI$。因此，归一化后的矩阵 $\widehat H=\frac{1}{\sqrt d}H$ 满足 $\widehat H\widehat H^T=I$，同时也满足 $\widehat H^T\widehat H=I$。
+
+对于任意向量 $x\in\mathbb{R}^d$，令 $y=\widehat Hx$，那么 $\lVert y\rVert_2^2=(\widehat Hx)^T(\widehat Hx)=x^T\widehat H^T\widehat Hx=x^Tx=\lVert x\rVert_2^2$。
+
+因此，归一化的 Hadamard transform 会保持向量长度。
+
+它不只是保持长度，还会把所有坐标混合起来。例如在二维情况下，$\frac{1}{\sqrt2}\begin{bmatrix}1&1\\1&-1\end{bmatrix}\begin{bmatrix}x_1\\x_2\end{bmatrix}=\frac{1}{\sqrt2}\begin{bmatrix}x_1+x_2\\x_1-x_2\end{bmatrix}$。
+
+每个新坐标都是原始坐标的线性组合，所以 Hadamard transform 可以看作一种保持长度的全局信息混合。
+
+</InfoDrawer>
+
+$B$、归一化后的 $H$ 和 $\Pi$ 都保持 orthogonal 结构，$G$ 则提供 Gaussian 随机性。把它们组合起来，就可以近似 dense Gaussian projection 的统计行为。
+
+更直观地说，Fastfood 就是用几个计算比较便宜的矩阵，完成随机符号变化、全局混合、随机排列和 Gaussian scaling，从而避免显式保存一个巨大的 dense matrix。
+
+Hadamard transform 可以通过 Fast Walsh–Hadamard Transform 计算。对于一个 $d$ 维向量，$Hx$ 的计算复杂度可以从 $O(d^2)$ 降到 $O(d\log d)$。
+
+一个 Fastfood block 的输入和输出都是 $d$ 维。如果完整模型有 $D>d$ 个参数，就堆叠大约 $D/d$ 个独立的 block，把输出扩展到 $D$ 维。这样，完整的 $Pz$ 不需要保存 $D\times d$ 个标量，只需要 $O(D)$ 的存储，计算复杂度是 $O(D\log d)$。
+
+需要注意，$HG\Pi HB$ 近似的是 Gaussian random matrix，而不是严格的 orthogonal matrix。因为 $G$ 会随机缩放各个方向，所以整个变换本身不保持长度。
+
+| 方法              | 投影矩阵                     |      存储复杂度 |       计算 $Pz$ |
+| ----------------- | ---------------------------- | --------------: | --------------: |
+| Dense Gaussian    | $P\in\mathbb{R}^{D\times d}$ |         $O(Dd)$ |         $O(Dd)$ |
+| Sparse projection | 非零密度为 $1/\sqrt D$       | $O(\sqrt D\,d)$ | $O(\sqrt D\,d)$ |
+| Fastfood          | 堆叠多个 $HG\Pi HB$          |          $O(D)$ |    $O(D\log d)$ |
+
+## 把 intrinsic dimension 用到预训练模型
+
+有了 Fastfood 以后，就可以把 intrinsic dimension 的测量方法应用到参数量很大的预训练语言模型上。
+
+<PaperCitation
+  title='Intrinsic Dimensionality Explains the Effectiveness of Language Model Fine-Tuning'
+  authors={['Armen Aghajanyan', 'Sonal Gupta', 'Luke Zettlemoyer']}
+  venue='ACL-IJCNLP'
+  year={2021}
+  doi='10.18653/v1/2021.acl-long.568'
+  arxiv='2012.13255'
+  pdf='https://aclanthology.org/2021.acl-long.568.pdf'
+/>
+
+这篇论文提出了 Structure-Aware Intrinsic Dimension（SAID）。它想把 intrinsic dimension 的概念用到具有多层结构的网络上。
+
+论文把之前不考虑网络层结构的方法称为 Direct Intrinsic Dimension（DID）。DID 在整个模型中共享同一个低维随机投影向量，没有区分不同层可能承担的不同功能。
+
+SAID 在这个共享的低维向量上，为每一层增加一个可学习的缩放系数。第 $i$ 层的参数可以写成 $\theta_i^D=\theta_{0,i}^D+\lambda_i[P(\theta^{d-m})]_i$。
+
+其中，$\theta_{0,i}^D$ 是 pretrained checkpoint 中第 $i$ 层的初始参数，$[P(\theta^{d-m})]_i$ 是随机投影后属于第 $i$ 层的参数更新，$\lambda_i$ 是这一层自己的可学习缩放系数。
+
+如果模型共有 $m$ 层，SAID 会从原来的 $d$ 个低维参数中拿出 $m$ 个位置来保存这些缩放系数。因此，它实际训练的是 $d-m$ 个共享的低维参数和 $m$ 个 $\lambda_i$，总数仍然是 $d$。
+
+这样，不同层就可以获得不同大小的参数更新。某一层如果对当前任务更重要，可以学习更大的 $\lambda_i$；如果某一层不需要太多变化，也可以学习较小的 $\lambda_i$。
+
+论文使用 SAID 和 DID 做了一系列实验。在给出的数据集和模型上，SAID 的结果都不差于 DID，并且多数情况下可以在达到相同性能时使用更小的 intrinsic dimension。
+
+## 这里测量的 $d_{90}$ 是什么
+
+这里的 intrinsic dimension 指的是预训练模型在某个下游任务上的微调维度。
+
+实验首先选择一个已经完成预训练的 checkpoint 作为参数起点 $\theta_0$，并把它固定。随后指定一个候选维度 $d$，只训练低维参数；在 SAID 中，还会同时训练每一层对应的缩放系数。固定的 Fastfood projection 再把这些低维参数映射成完整模型的参数更新。
+
+对于每个候选 $d$，模型都会在具体的下游任务上重新进行一次低维微调，并把结果和标准 full fine-tuning 的性能进行比较。研究者不断改变 $d$，寻找能够达到 full fine-tuning 性能 $90\%$ 的最小维度，并把它记为 $d_{90}$。
+
+因此，$d_{90}$ 表示的不是“训练出整个模型需要多少维”，而是“从当前 pretrained checkpoint 出发，为了适配某个下游任务，至少需要多少个有效的 trainable degrees of freedom”。
+
+它依赖 pretrained checkpoint、下游任务、随机投影、优化器和性能阈值，是一个实验得到的估计值，而不是模型本身固定不变的属性。
