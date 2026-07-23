@@ -4,8 +4,23 @@ Custom components live in `src/components/custom/` and are imported from the dir
 point:
 
 ```mdx
-import { InfoDrawer, PaperCitation } from '@/components/custom'
+import { BlogLink, InfoDrawer, PaperCitation } from '@/components/custom'
 ```
+
+## BlogLink
+
+Use `BlogLink` for navigation from one MDX blog post to another. Pass only the target slug; the
+component reads the localized target title, description, category, and date from Astro content.
+
+```mdx
+<BlogLink slug='transformer-encoder' />
+```
+
+Use `label` to describe the relationship or `showDescription={false}` for a title-only preview.
+Production builds fail when the localized target is missing or is still a draft, preventing broken
+internal links. Use the external `LinkPreview` component for non-blog URLs.
+
+Complete documentation: `src/components/custom/BlogLink.md`.
 
 ## PaperCitation
 

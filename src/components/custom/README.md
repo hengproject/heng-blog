@@ -2,16 +2,17 @@
 
 Project-owned reusable components live here:
 
+- `BlogLink.astro`: metadata-aware link between internal blog posts.
 - `InfoDrawer.astro`: resizable supplementary-information drawer.
 - `PaperCitation.astro`: paper metadata and citation card for MDX articles.
 
 Import components through the directory entry point:
 
 ```mdx
-import { InfoDrawer, PaperCitation } from '@/components/custom'
+import { BlogLink, InfoDrawer, PaperCitation } from '@/components/custom'
 ```
 
-Detailed examples are available in `InfoDrawer.md` and `PaperCitation.md`.
+Detailed examples are available in `BlogLink.md`, `InfoDrawer.md`, and `PaperCitation.md`.
 
 Put personal components for Heng's Blog in this directory. Import them directly, for example:
 

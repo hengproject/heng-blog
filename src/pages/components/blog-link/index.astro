@@ -1,0 +1,22 @@
+---
+import CommonPage from '@/layouts/CommonPage.astro'
+import { BlogLink } from '@/components/custom'
+---
+
+<CommonPage title='站内文章链接组件'>
+  <div class='not-prose flex flex-col gap-10'>
+    <section aria-labelledby='blog-link-default'>
+      <h2 id='blog-link-default' class='mb-4 text-lg font-semibold text-foreground'>完整预览</h2>
+      <BlogLink slug='transformer-encoder' />
+    </section>
+
+    <section aria-labelledby='blog-link-compact'>
+      <h2 id='blog-link-compact' class='mb-4 text-lg font-semibold text-foreground'>紧凑预览</h2>
+      <BlogLink
+        slug='transformer-decoder'
+        label='下一篇：Transformer Decoder'
+        showDescription={false}
+      />
+    </section>
+  </div>
+</CommonPage>

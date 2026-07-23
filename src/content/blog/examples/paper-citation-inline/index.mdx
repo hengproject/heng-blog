@@ -11,7 +11,7 @@ draft: true
 translationStatus: draft
 ---
 
-import { PaperCitation } from '@/components/custom'
+import { BlogLink, PaperCitation } from '@/components/custom'
 
 在技术文章中，论文引用通常只需要提供作者、年份、标题和原始链接。使用 `inline` 模式可以将这些信息放在正文附近，而不会像完整论文卡片一样占用较大空间。
 
@@ -58,3 +58,7 @@ import { PaperCitation } from '@/components/custom'
 ```
 
 `shortAuthors` 只控制 inline 模式中显示的作者缩写。`authors` 仍保留完整作者列表，用于生成可复制的完整引用。
+
+## 延伸阅读
+
+<BlogLink slug='transformer-encoder' label='继续阅读 Transformer Encoder' />
